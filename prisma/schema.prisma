@@ -1,0 +1,183 @@
+// ─── Datasource ───────────────────────────────────────────────────────────────
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Generator ────────────────────────────────────────────────────────────────
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  USER
+}
+
+enum PermissionLevel {
+  VIEWER
+  EDITOR
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  fullName     String?
+  avatarUrl    String?
+  passwordHash String
+  role         Role     @default(USER)
+  // Quota in bytes — default 5 GiB
+  storageQuota BigInt   @default(5368709120)
+  storageUsed  BigInt   @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  ownedFolders     Folder[]      @relation("FolderOwner")
+  ownedFiles       File[]        @relation("FileOwner")
+  receivedShares   FileShare[]   @relation("SharedWithUser")
+  accessLogs       AccessLog[]
+  sentMessages     ChatMessage[] @relation("SentMessages")
+  receivedMessages ChatMessage[] @relation("ReceivedMessages")
+  pushSubscriptions PushSubscription[]
+
+  @@index([username])
+}
+
+model Folder {
+  id             String    @id @default(uuid())
+  name           String
+  ownerId        String
+  owner          User      @relation("FolderOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  parentFolderId String?
+  parentFolder   Folder?   @relation("FolderHierarchy", fields: [parentFolderId], references: [id], onDelete: Cascade)
+  subFolders     Folder[]  @relation("FolderHierarchy")
+  files          File[]
+  isTrashed      Boolean   @default(false)
+  trashedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  shares FileShare[] @relation("FolderShare")
+
+  @@index([ownerId])
+  @@index([parentFolderId])
+  @@index([isTrashed])
+}
+
+model File {
+  id        String    @id @default(uuid())
+  name      String
+  mimeType  String
+  // Size in bytes
+  size      BigInt
+  ownerId   String
+  owner     User      @relation("FileOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  folderId  String?
+  folder    Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  isStarred Boolean   @default(false)
+  isTrashed Boolean   @default(false)
+  trashedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  versions     FileVersion[]
+  shares       FileShare[]   @relation("FileShare")
+  accessLogs   AccessLog[]
+  chatMessages ChatMessage[] @relation("MessageFile")
+
+  @@index([ownerId])
+  @@index([folderId])
+  @@index([isTrashed])
+  @@index([name])
+}
+
+model FileVersion {
+  id            String   @id @default(uuid())
+  fileId        String
+  file          File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  // Absolute path on the physical storage volume
+  physicalPath  String
+  // Hash for deduplication and integrity checks
+  checksum      String
+  versionNumber Int
+  sizeBytes     BigInt
+  uploadedAt    DateTime @default(now())
+
+  @@unique([fileId, versionNumber])
+  @@index([fileId])
+}
+
+model FileShare {
+  id               String          @id @default(uuid())
+  // Either fileId or folderId is set, not both
+  fileId           String?
+  file             File?           @relation("FileShare", fields: [fileId], references: [id], onDelete: Cascade)
+  folderId         String?
+  folder           Folder?         @relation("FolderShare", fields: [folderId], references: [id], onDelete: Cascade)
+  sharedWithUserId String
+  sharedWith       User            @relation("SharedWithUser", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  permissionLevel  PermissionLevel
+  createdAt        DateTime        @default(now())
+
+  @@unique([fileId, sharedWithUserId])
+  @@unique([folderId, sharedWithUserId])
+  @@index([sharedWithUserId])
+}
+
+model AccessLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileId     String
+  file       File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  accessedAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([fileId])
+  @@index([accessedAt])
+}
+
+model ChatMessage {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content    String?
+  fileId     String?
+  file       File?    @relation("MessageFile", fields: [fileId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([senderId, receiverId])
+}
+
+model PublicLink {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  createdBy String
+  // Either fileId or folderId is set, not both
+  fileId    String?
+  folderId  String?
+  label     String?  // optional display label
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  keys      Json
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

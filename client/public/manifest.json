@@ -1,0 +1,17 @@
+{
+  "name": "Lead Drive",
+  "short_name": "Lead Drive",
+  "description": "Secure, private file storage with real-time antivirus protection.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#E6EBF0",
+  "theme_color": "#2c6bed",
+  "icons": [
+    {
+      "src": "/lead-logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512 any",
+      "purpose": "any maskable"
+    }
+  ]
+}

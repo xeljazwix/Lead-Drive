@@ -1,0 +1,197 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Image Viewer */
+.imageWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: var(--r-md);
+  padding: 8px;
+}
+
+.image {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: var(--r-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Video Viewer */
+.videoWrapper {
+  width: 100%;
+  background: #000;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.video {
+  width: 100%;
+  max-height: 65vh;
+  display: block;
+}
+
+/* Audio Viewer */
+.audioWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 32px 16px;
+  background: var(--surface-container);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-inset);
+}
+
+.audioDisc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+  margin-bottom: 24px;
+  color: var(--primary);
+  animation: spin 8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.audioPlayer {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 8px;
+}
+
+/* Document & PDF Viewer */
+.pdfWrapper {
+  width: 100%;
+  height: 65vh;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.pdfFrame {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Text & Code Viewer */
+.textWrapper {
+  width: 100%;
+  max-height: 65vh;
+  overflow: auto;
+  background: #1e1e24;
+  color: #f8f8f2;
+  padding: 16px;
+  border-radius: var(--r-md);
+  font-family: 'Fira Code', 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Generic Fallback Viewer */
+.genericCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  padding: 40px 24px;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised-sm);
+}
+
+.genericIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--r-xl);
+  background: var(--surface-container);
+  box-shadow: var(--shadow-inset-sm);
+  margin-bottom: 24px;
+  color: var(--text-subtle);
+}
+
+.genericInfo {
+  margin-bottom: 24px;
+}
+
+.genericName {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+
+.genericMeta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.genericDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: var(--r-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: var(--shadow-raised-sm);
+  transition: all var(--t-base);
+}
+
+.genericDownloadBtn:hover {
+  background: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.genericDownloadBtn:active {
+  transform: translateY(0);
+}
+
+/* Loader / Spinner */
+.spinnerWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-subtle);
+}
+
+.errorWrapper {
+  color: var(--danger);
+  padding: 24px;
+  background: var(--danger-bg);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+}

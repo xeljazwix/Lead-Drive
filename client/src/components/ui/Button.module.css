@@ -1,0 +1,67 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: 500;
+  transition: box-shadow var(--t-base), transform var(--t-fast), opacity var(--t-fast);
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ─── Sizes ─────────────────────────────────────────────────────────────── */
+.sm  { padding: 6px 14px;  font-size: 12px; border-radius: var(--r-sm); }
+.md  { padding: 10px 20px; font-size: 14px; border-radius: var(--r-md); }
+.lg  { padding: 14px 28px; font-size: 16px; border-radius: var(--r-md); }
+.icon-only { padding: 10px; border-radius: var(--r-full); }
+
+/* ─── Variants ───────────────────────────────────────────────────────────── */
+.primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: -4px -4px 8px var(--btn-primary-high), 4px 4px 8px var(--btn-primary-glow);
+}
+.primary:hover:not(:disabled)  { box-shadow: -6px -6px 12px var(--btn-primary-high), 6px 6px 12px var(--btn-primary-glow); }
+.primary:active:not(:disabled) { box-shadow: var(--shadow-pressed); transform: scale(0.98); }
+
+.ghost {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-raised-sm);
+}
+.ghost:hover:not(:disabled)  { box-shadow: var(--shadow-raised); }
+.ghost:active:not(:disabled) { box-shadow: var(--shadow-inset-sm); transform: scale(0.97); }
+
+.danger {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: -4px -4px 8px var(--btn-danger-high), 4px 4px 8px var(--btn-danger-glow);
+}
+.danger:hover:not(:disabled)  { box-shadow: -6px -6px 12px var(--btn-danger-high), 6px 6px 12px var(--btn-danger-glow); }
+.danger:active:not(:disabled) { box-shadow: var(--shadow-pressed); transform: scale(0.98); }
+
+.text {
+  background: transparent;
+  color: var(--primary);
+  padding-left: 4px;
+  padding-right: 4px;
+  box-shadow: none;
+}
+.text:hover:not(:disabled) { color: var(--primary-light); text-decoration: underline; }
+
+/* ─── Spinner ────────────────────────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.icon { display: flex; align-items: center; font-size: 1.1em; }

@@ -1,0 +1,66 @@
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(16, 20, 30, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  width: 100%;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+@keyframes slideUp { from { transform: translateY(16px) scale(0.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.title { font-size: 16px; font-weight: 600; color: var(--text); }
+
+.close {
+  width: 32px; height: 32px;
+  border-radius: var(--r-full);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--text-muted);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised-sm);
+  transition: box-shadow var(--t-base), color var(--t-base);
+  cursor: pointer; border: none;
+}
+.close:hover  { color: var(--text); box-shadow: var(--shadow-raised); }
+.close:active { box-shadow: var(--shadow-inset-sm); }
+
+.body   { padding: 20px 24px; max-height: 70vh; overflow-y: auto; }
+.footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ─── Mobile View ────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .overlay { 
+    padding: 0; 
+    align-items: flex-end; /* Align modal to bottom */
+  }
+  .modal {
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    max-width: 100% !important; /* Override inline maxWidth */
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.15);
+    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes slideUpSheet {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .header { padding: 20px 16px 12px; }
+  .body { padding: 16px; max-height: 80vh; }
+  .footer { padding: 16px; flex-direction: column; }
+  .footer > * { width: 100%; margin: 0; } /* Make buttons full width on mobile */
+}

@@ -1,0 +1,26 @@
+.list { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+
+.item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised-sm);
+}
+
+.badge {
+  width: 40px; height: 40px; border-radius: var(--r-md); flex-shrink: 0;
+  background: var(--primary-dim); color: var(--primary);
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.info { flex: 1; }
+.date { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.size { font-size: 12px; color: var(--text-muted); }
+.hash { font-size: 10px; color: var(--text-muted); font-family: monospace; margin-top: 2px; }
+
+.currentBadge {
+  font-size: 11px; font-weight: 700; color: var(--success);
+  background: var(--success-bg); padding: 3px 8px; border-radius: var(--r-full);
+}

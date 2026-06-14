@@ -1,0 +1,61 @@
+.menu {
+  position: fixed;
+  z-index: 2000;
+  min-width: 200px;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-raised), 0 0 0 1px var(--border);
+  padding: 6px;
+  list-style: none;
+  animation: pop 0.12s ease;
+}
+@keyframes pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+.item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 12px;
+  font-size: 13px; font-weight: 500; color: var(--text);
+  border-radius: var(--r-sm);
+  background: transparent; border: none;
+  cursor: pointer; transition: background var(--t-fast), color var(--t-fast);
+  text-align: left;
+}
+.item:hover:not(:disabled)  { background: var(--primary-dim); color: var(--primary); }
+.item:active:not(:disabled) { background: var(--primary-dim); }
+.item:disabled              { opacity: 0.45; cursor: not-allowed; }
+.item.danger                { color: var(--danger); }
+.item.danger:hover          { background: var(--danger-bg); color: var(--danger); }
+
+.itemIcon { font-size: 15px; width: 20px; text-align: center; }
+
+.divider { height: 1px; background: var(--border); margin: 4px 6px; }
+
+/* ─── Mobile View (Bottom Sheet) ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .menu {
+    top: auto !important;
+    left: 0 !important;
+    bottom: 0;
+    width: 100%;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    padding: 16px 12px 24px;
+    box-shadow: 0 -8px 24px var(--shadow-dark);
+    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .item {
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+  .itemIcon {
+    font-size: 18px;
+    width: 24px;
+  }
+  .divider {
+    margin: 8px 12px;
+  }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

@@ -1,0 +1,111 @@
+.toolbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: var(--surface-raised);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-raised);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.3s ease;
+}
+
+.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-right: 1px solid var(--border);
+  padding-right: 16px;
+}
+
+.count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-raised-sm);
+  background: var(--surface);
+  transition: all var(--t-base);
+}
+
+.btn:hover {
+  color: var(--primary);
+  box-shadow: var(--shadow-inset-sm);
+}
+
+.btn:active {
+  box-shadow: var(--shadow-inset-sm);
+  color: var(--primary-light);
+}
+
+.dangerBtn {
+  color: var(--danger);
+}
+
+.dangerBtn:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.dangerBtn:active {
+  box-shadow: var(--shadow-inset-sm);
+}
+
+/* ─── Mobile View ────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .toolbar {
+    bottom: 90px; /* Above the floating pill nav */
+    padding: 10px 16px;
+    gap: 10px;
+    width: 90%;
+    max-width: 400px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .info {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-right: 0;
+    padding-bottom: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+  .actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}

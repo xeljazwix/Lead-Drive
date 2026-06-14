@@ -1,0 +1,26 @@
+.zone { position: relative; flex: 1; display: flex; flex-direction: column; }
+
+.dragging { outline: 2px dashed var(--primary); outline-offset: -4px; border-radius: var(--r-lg); }
+
+.overlay {
+  position: absolute; inset: 0;
+  background: rgba(240,244,255,0.92);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-lg);
+  z-index: 50;
+  animation: fadeIn 0.1s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.overlayContent {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 40px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+  border: 2px dashed var(--primary);
+}
+.overlayIcon { font-size: 48px; color: var(--primary); animation: bounce 0.8s ease infinite alternate; }
+@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+.overlayText { font-size: 18px; font-weight: 600; color: var(--primary); }
