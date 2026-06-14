@@ -6,6 +6,7 @@ dist/
 # ─── Storage volumes (should be Docker-managed, not committed) ────────────────
 /temp/
 /storage/
+/public/uploads/
 
 # ─── Prisma ───────────────────────────────────────────────────────────────────
 prisma/migrations/
@@ -16,3 +17,8 @@ prisma/migrations/
 # ─── Logs ─────────────────────────────────────────────────────────────────────
 *.log
 logs/
+
+# ─── Test / scratch files ─────────────────────────────────────────────────────
+test.js
+test2.js
+test_upload.js
