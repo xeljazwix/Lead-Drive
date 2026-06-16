@@ -52,11 +52,20 @@
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
     "confirmPassword": "تأكيد كلمة المرور",
-    "updatePassword": "تحديث كلمة المرور"
+    "updatePassword": "تحديث كلمة المرور",
+    "reservedQuota": "الحصة المحجوزة",
+    "actualUsage": "الاستخدام الفعلي",
+    "serverCapacity": "سعة الخادم",
+    "totalCapacityGb": "إجمالي السعة (GB)",
+    "updateCapacityHint": "قم بتحديث هذا ليتطابق مع سعة الخادم الفعلية الخاصة بك حتى تظل التحليلات دقيقة.",
+    "serverCapacityUpdated": "تم تحديث سعة الخادم",
+    "serverAnalytics": "تحليلات الخادم",
+    "editCapacity": "تعديل السعة"
   },
   "drive": {
     "upload": "رفع",
     "newFolder": "مجلد جديد",
+    "back": "رجوع",
     "delete": "حذف",
     "star": "تمييز بنجمة",
     "removeStar": "إزالة النجمة",
@@ -130,7 +139,17 @@
     "copyLink": "نسخ",
     "copied": "تم النسخ!",
     "linkHint": "يمكن لأي شخص يمتلك هذا الرابط عرض الملفات وتنزيلها دون تسجيل الدخول.",
-    "permission": "الصلاحية"
+    "permission": "الصلاحية",
+    "expireNever": "صلاحية دائمة",
+    "expire1Day": "يوم واحد",
+    "expire7Days": "7 أيام",
+    "expire30Days": "30 يوم",
+    "expiresIn": "ينتهي الرابط في {{time}}",
+    "day": "يوم",
+    "days": "أيام",
+    "hour": "ساعة",
+    "hours": "ساعات",
+    "expired": "منتهي الصلاحية"
   },
   "publicPage": {
     "sharedWithYou": "تمت مشاركته معك",
@@ -173,5 +192,17 @@
     "selectFile": "حدد الملف المراد إرفاقه",
     "noFiles": "لا توجد ملفات متاحة.",
     "fileShared": "تمت مشاركة الملف"
+  },
+  "toast": {
+    "folderMovedToTrash": "تم نقل المجلد إلى المهملات",
+    "movedToTrash": "تم النقل إلى المهملات",
+    "archiveCreated": "تم إنشاء الأرشيف بنجاح",
+    "archiveExtracted": "تم استخراج الأرشيف بنجاح",
+    "folderCreated": "تم إنشاء المجلد",
+    "movedCountItems": "تم نقل {{count}} من العناصر",
+    "failedToMoveCount": "فشل نقل {{count}} من العناصر",
+    "copiedCount": "تم نسخ {{count}} من العناصر",
+    "cutCount": "تم قص {{count}} من العناصر",
+    "pastedCount": "تم لصق {{count}} من العناصر"
   }
 }

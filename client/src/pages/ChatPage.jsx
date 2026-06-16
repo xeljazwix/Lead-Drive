@@ -8,6 +8,7 @@ import { toast } from '../components/ui/Toast.jsx';
 import FilePickerModal from '../components/chat/FilePickerModal.jsx';
 import { Header } from '../components/layout/Header.jsx';
 import { Send, Paperclip, ChevronLeft, File } from 'lucide-react';
+import { getAvatarUrl } from '../utils/format.js';
 import styles from './ChatPage.module.css';
 
 const SOCKET_URL = '/';
@@ -116,23 +117,18 @@ export default function ChatPage() {
                 onClick={() => setSelectedUser(u)}
               >
                 <div className={styles.avatar}>
-                  {u.avatarUrl ? <img src={u.avatarUrl} alt="" style={{width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover'}} /> : u.username.charAt(0).toUpperCase()}
+                  {u.avatarUrl ? <img src={getAvatarUrl(u.avatarUrl)} alt="" style={{width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover'}} /> : u.username.charAt(0).toUpperCase()}
                 </div>
                 <div className={styles.userInfo}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span className={styles.userName}>{u.fullName || u.username}</span>
-                    {unreadCounts[u.id] > 0 && <span className={styles.userUnreadBadge}>{unreadCounts[u.id]}</span>}
-                  </div>
-                  <span className={styles.userStatus} style={{ color: onlineUsers.has(u.id) ? '#10b981' : 'var(--text-secondary)' }}>
-                    {onlineUsers.has(u.id) ? 'Online' : 'Offline'}
-                  </span>
+                  <p className={styles.userName}>{u.fullName || u.username}</p>
                 </div>
+                {unreadCounts[u.id] > 0 && <span className={styles.userUnreadBadge}>{unreadCounts[u.id]}</span>}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Chat Area */}
+        {/* Main Chat Area */}
         <div className={`${styles.chatArea} ${!selectedUser ? styles.hiddenOnMobile : ''}`}>
           {selectedUser ? (
             <>
@@ -141,7 +137,7 @@ export default function ChatPage() {
                   <ChevronLeft size={24} />
                 </button>
                 <div className={styles.avatar}>
-                  {selectedUser.avatarUrl ? <img src={selectedUser.avatarUrl} alt="" style={{width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover'}} /> : selectedUser.username.charAt(0).toUpperCase()}
+                  {selectedUser.avatarUrl ? <img src={getAvatarUrl(selectedUser.avatarUrl)} alt="" style={{width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover'}} /> : selectedUser.username.charAt(0).toUpperCase()}
                 </div>
                 <div className={styles.chatHeaderInfo}>
                   <span className={styles.userName}>{selectedUser.fullName || selectedUser.username}</span>
@@ -153,19 +149,27 @@ export default function ChatPage() {
                 {messages.length === 0 && <div className={styles.emptyState}>No messages yet. Say hi!</div>}
                 {messages.map(msg => {
                   const isSent = msg.senderId === currentUser.id;
+                  const msgUser = isSent ? currentUser : selectedUser;
                   return (
-                    <div key={msg.id} className={`${styles.messageWrapper} ${isSent ? styles.sent : styles.received}`}>
-                      <div className={styles.messageBubble}>
-                        {msg.content}
-                      </div>
-                      {msg.file && (
-                        <div className={styles.fileAttachment} onClick={() => handleDownload(msg.file.id, msg.file.name)}>
-                          <div className={styles.fileIcon}><File size={20} /></div>
-                          <div className={styles.fileName}>{msg.file.name}</div>
+                    <div key={msg.id} className={`${styles.messageRow} ${isSent ? styles.sentRow : styles.receivedRow}`}>
+                      {!isSent && (
+                        <div className={styles.messageAvatar}>
+                          {msgUser.avatarUrl ? <img src={getAvatarUrl(msgUser.avatarUrl)} alt="" /> : msgUser.username.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <div className={styles.messageTime}>
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <div className={`${styles.messageWrapper} ${isSent ? styles.sent : styles.received}`}>
+                        <div className={styles.messageBubble}>
+                          {msg.content}
+                        </div>
+                        {msg.file && (
+                          <div className={styles.fileAttachment} onClick={() => handleDownload(msg.file.id, msg.file.name)}>
+                            <div className={styles.fileIcon}><File size={20} /></div>
+                            <div className={styles.fileName}>{msg.file.name}</div>
+                          </div>
+                        )}
+                        <div className={styles.messageTime}>
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
                       </div>
                     </div>
                   );

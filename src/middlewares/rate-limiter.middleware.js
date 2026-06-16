@@ -19,21 +19,21 @@ export const loginLimiter = rateLimit({
   message: 'Too many login attempts.',
 });
 
-// ─── Upload Limiter — 50 uploads per hour per IP ──────────────────────────────
+// ─── Upload Limiter — 1000 uploads per hour per IP ──────────────────────────────
 // Volumetric attack mitigation for the upload pipeline
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 50,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   handler,
   message: 'Upload rate limit exceeded.',
 });
 
-// ─── General API Limiter — 200 req per 15 min per IP ─────────────────────────
+// ─── General API Limiter — 2000 req per 15 min per IP ─────────────────────────
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
   handler,

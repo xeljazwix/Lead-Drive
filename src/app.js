@@ -1,4 +1,7 @@
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── BigInt JSON Serialization Fix ───────────────────────────────────────────
 // Prisma returns BigInt for storageQuota, storageUsed, and file size fields.
@@ -11,7 +14,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import path from 'node:path';
 import fs from 'node:fs';
 
 import router from './routes/index.js';
@@ -22,13 +24,15 @@ import { logger } from './utils/logger.js';
 const app = express();
 
 // ─── Security Headers ─────────────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 app.use(cors({
   origin: process.env.CORS_ORIGIN ?? '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Bypass-Tunnel-Reminder'],
 }));
 
 // ─── Body Parsing ─────────────────────────────────────────────────────────────
@@ -49,6 +53,16 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
+});
+
+
+
+// ─── Temporary Install Route ────────────────────────────────────────────────────
+app.get('/install', (req, res) => {
+  const { exec } = require('child_process');
+  exec('npm install', (err, stdout, stderr) => {
+    res.send(`<pre>STDOUT:\n${stdout}\nSTDERR:\n${stderr}\nERROR:\n${err}</pre>`);
+  });
 });
 
 // ─── API Routes ───────────────────────────────────────────────────────────────

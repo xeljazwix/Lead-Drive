@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { ContextMenu } from '../ui/ContextMenu.jsx';
 import { useDriveStore } from '../../store/drive.store.js';
 import { formatDate } from '../../utils/format.js';
-import { Folder, FolderOpen, Edit, Share2, Trash2, RotateCcw, Star, Download, Archive } from 'lucide-react';
+import { Folder, FolderOpen, Edit, Share2, Trash2, RotateCcw, Star, Download, Archive, Copy, Scissors } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styles from './FolderCard.module.css';
 
-export function FolderCard({ folder, onOpen, onRename, onTrash, onShare, onRestore, onHardDelete, onStar, onCompress, onDownload, isTrash, view, itemsList, onMoveToFolder }) {
+export function FolderCard({ folder, onOpen, onRename, onTrash, onShare, onRestore, onHardDelete, onStar, onCompress, onDownload, isTrash, view, itemsList, onMoveToFolder, index = 0 }) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const { selected, selectItem, clipboard } = useDriveStore();
+  const { selected, selectItem, clipboard, setClipboard } = useDriveStore();
   const isSelected = selected.has(folder.id);
   const isCut = clipboard.action === 'cut' && clipboard.items.some(i => i.id === folder.id);
 
@@ -26,6 +26,9 @@ export function FolderCard({ folder, onOpen, onRename, onTrash, onShare, onResto
     { icon: <Archive size={14} />,    label: t('drive.compress', 'Compress'), onClick: () => onCompress?.(folder) },
     { icon: <Edit size={14} />,       label: t('drive.name'),       onClick: () => onRename(folder) }, // closest word for rename
     { icon: <Share2 size={14} />,     label: t('drive.share'),         onClick: () => onShare(folder) },
+    { divider: true },
+    { icon: <Copy size={14} />,       label: t('drive.copy', 'Copy'),  onClick: () => setClipboard('copy', [{ id: folder.id, type: 'folder' }]) },
+    { icon: <Scissors size={14} />,   label: t('drive.cut', 'Cut'),    onClick: () => setClipboard('cut', [{ id: folder.id, type: 'folder' }]) },
     { divider: true },
     { icon: <Trash2 size={14} />,     label: t('drive.delete'), onClick: () => onTrash(folder), danger: true },
   ];
@@ -122,7 +125,7 @@ export function FolderCard({ folder, onOpen, onRename, onTrash, onShare, onResto
     return (
       <>
         <div
-          className={`${styles.row} ${isSelected ? styles.selected : ''} ${isDragOver ? styles.dragOver : ''}`}
+          className={`${styles.row} ${isSelected ? styles.selected : ''} ${isDragOver ? styles.dragOver : ''} animate-pop-in stagger-${(index % 10) + 1}`}
           style={{ opacity: isCut ? 0.5 : 1 }}
           onClick={handleClick}
           onDoubleClick={() => onOpen(folder)}
@@ -156,7 +159,7 @@ export function FolderCard({ folder, onOpen, onRename, onTrash, onShare, onResto
   return (
     <>
       <div
-        className={`${styles.card} ${isSelected ? styles.selected : ''} ${isDragOver ? styles.dragOver : ''}`}
+        className={`${styles.card} ${isSelected ? styles.selected : ''} ${isDragOver ? styles.dragOver : ''} animate-pop-in stagger-${(index % 10) + 1}`}
         style={{ opacity: isCut ? 0.5 : 1 }}
         onClick={handleClick}
         onDoubleClick={() => onOpen(folder)}

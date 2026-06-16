@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { User, Lock, Upload, Camera } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getAvatarUrl } from '../utils/format.js';
 import styles from './SettingsPage.module.css';
 
 export function SettingsPage() {
@@ -98,7 +99,7 @@ export function SettingsPage() {
             <div className={styles.avatarSection}>
               <div className={styles.avatarWrapper}>
                 {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="Avatar" className={styles.avatarImg} />
+                  <img src={getAvatarUrl(user.avatarUrl)} alt="Avatar" className={styles.avatarImg} />
                 ) : (
                   <div className={styles.avatarPlaceholder}>
                     {user?.fullName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase()}

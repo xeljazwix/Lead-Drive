@@ -1,4 +1,4 @@
-import { Star, Download, Share2, Trash2, X, Archive } from 'lucide-react';
+import { Star, Download, Share2, Trash2, X, Archive, Copy, Scissors } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styles from './BulkToolbar.module.css';
 
@@ -11,7 +11,9 @@ export function BulkToolbar({
   onDownload,
   onShare,
   onCompress,
-  onTrash
+  onTrash,
+  onCopy,
+  onCut
 }) {
   const { t } = useTranslation();
   const visible = selectedCount > 0;
@@ -33,6 +35,16 @@ export function BulkToolbar({
           </button>
         )}
         
+        <button className={styles.btn} onClick={onCopy} title={t('drive.copy', 'Copy')}>
+          <Copy size={14} />
+          <span>{t('drive.copy', 'Copy')}</span>
+        </button>
+        
+        <button className={styles.btn} onClick={onCut} title={t('drive.cut', 'Cut')}>
+          <Scissors size={14} />
+          <span>{t('drive.cut', 'Cut')}</span>
+        </button>
+
         <button className={styles.btn} onClick={onDownload} title={t('modals.download')}>
           <Download size={14} />
           <span>{t('modals.download')}</span>

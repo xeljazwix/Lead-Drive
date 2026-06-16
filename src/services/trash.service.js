@@ -29,7 +29,7 @@ export async function runTrashPurge() {
     try {
       // Delete physical versions from disk
       for (const version of file.versions) {
-        purgeFile(version.physicalPath);
+        await purgeFile(version.physicalPath);
       }
 
       // Decrement owner's storage usage

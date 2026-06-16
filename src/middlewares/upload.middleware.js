@@ -12,10 +12,10 @@ fs.mkdirSync(TEMP_DIR, { recursive: true });
 // reads them here before promoting to /storage.
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, TEMP_DIR),
-  filename: (_req, file, cb) => {
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = path.extname(file.originalname);
-    cb(null, `${unique}${ext}`);
+  filename: (req, file, cb) => {
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const ext = path.extname(originalName);
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
   },
 });
 
@@ -40,12 +40,13 @@ const BLOCKED_EXTENSIONS = new Set([
 ]);
 
 function fileFilter(_req, file, cb) {
+  const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
   const mime = (file.mimetype ?? '').toLowerCase();
-  const ext  = path.extname(file.originalname).toLowerCase();
+  const ext  = path.extname(originalName).toLowerCase();
 
   if (BLOCKED_MIME_TYPES.has(mime) || BLOCKED_EXTENSIONS.has(ext)) {
     return cb(new BadRequestError(
-      `File type '${file.originalname}' is not permitted for security reasons`
+      `File type '${originalName}' is not permitted for security reasons`
     ));
   }
   cb(null, true);

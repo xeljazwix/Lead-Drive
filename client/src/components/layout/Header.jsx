@@ -5,7 +5,7 @@ import { useDriveStore } from '../../store/drive.store.js';
 import { Input } from '../ui/Input.jsx';
 import { FilterBar } from '../drive/FilterBar.jsx';
 import { useAuthStore } from '../../store/auth.store.js';
-import { formatBytes, quotaPercent } from '../../utils/format.js';
+import { formatBytes, quotaPercent, getAvatarUrl } from '../../utils/format.js';
 import { Search, LayoutGrid, List, ShieldCheck, Settings as SettingsIcon, LogOut, X, Sun, Moon, Globe, MessageCircle, Bell, Download, Share } from 'lucide-react';
 import { useThemeStore } from '../../store/theme.store.js';
 import { useTranslation } from 'react-i18next';
@@ -151,7 +151,7 @@ export function Header({ title, actions }) {
         <button className={styles.mobileProfileBtn} onClick={() => setMobileMenuOpen(true)}>
           {totalUnread > 0 && <span className={styles.headerUnreadDot}>{totalUnread}</span>}
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt="Avatar" className={styles.mobileAvatarImg} />
+            <img src={getAvatarUrl(user.avatarUrl)} alt="Avatar" className={styles.mobileAvatarImg} />
           ) : (
             <div className={styles.mobileAvatar}>{user?.fullName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase()}</div>
           )}
@@ -170,7 +170,7 @@ export function Header({ title, actions }) {
 
             <div className={styles.drawerUser}>
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="Avatar" className={styles.drawerAvatarImg} />
+                <img src={getAvatarUrl(user.avatarUrl)} alt="Avatar" className={styles.drawerAvatarImg} />
               ) : (
                 <div className={styles.drawerAvatar}>{user?.fullName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase()}</div>
               )}
@@ -188,7 +188,7 @@ export function Header({ title, actions }) {
                 />
               </div>
               <p className={styles.drawerQuotaText}>
-                {formatBytes(user?.storageUsed)} {t('quota.of')} {formatBytes(user?.storageQuota)} {t('quota.used')}
+                <span dir="ltr" style={{ display: 'inline-block' }}>{formatBytes(user?.storageUsed)}</span> {t('quota.of')} <span dir="ltr" style={{ display: 'inline-block' }}>{formatBytes(user?.storageQuota)}</span> {t('quota.used')}
               </p>
             </div>
 

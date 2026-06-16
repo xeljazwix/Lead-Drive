@@ -41,6 +41,8 @@ function getViewerType(mimeType, filename) {
   return 'generic';
 }
 
+import { BASE } from '../../api/client.js';
+
 function getModalWidth(type) {
   switch (type) {
     case 'text':  return 850;
@@ -55,7 +57,7 @@ function getModalWidth(type) {
  */
 async function fetchTextContent(fileId) {
   const token = localStorage.getItem('cd_token');
-  const res = await fetch(`/api/files/${fileId}/download`, {
+  const res = await fetch(`${BASE}/files/${fileId}/download`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
@@ -108,7 +110,7 @@ export function FileViewerModal({ file, onClose, onShare }) {
 
     // Image / video / audio / pdf — stream directly via query token
     const token = localStorage.getItem('cd_token');
-    const streamUrl = `/api/files/${file.id}/download?token=${token}`;
+    const streamUrl = `${BASE}/files/${file.id}/download?token=${token}`;
     setBlobUrl(streamUrl);
     setLoading(false);
 

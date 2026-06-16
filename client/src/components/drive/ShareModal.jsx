@@ -7,6 +7,7 @@ import { usersApi } from '../../api/auth.js';
 import { toast } from '../ui/Toast.jsx';
 import { Eye, Pencil, Link2, Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getAvatarUrl } from '../../utils/format.js';
 
 export function ShareModal({ item, items, type, onClose }) {
   const { t } = useTranslation();
@@ -18,9 +19,9 @@ export function ShareModal({ item, items, type, onClose }) {
   const [publicLink, setPublicLink] = useState('');
   const [generatingLink, setGeneratingLink] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [expiresInDays, setExpiresInDays] = useState(0);
 
   useEffect(() => {
-    if (!username.trim()) { setSearchResults([]); return; }
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
@@ -69,6 +70,8 @@ export function ShareModal({ item, items, type, onClose }) {
       } else {
         body = { folderId: item.id, label: item.name };
       }
+      if (expiresInDays > 0) body.expiresInDays = expiresInDays;
+
       const res = await publicLinksApi.create(body);
       setPublicLink(`${window.location.origin}/p/${res.token}`);
     } catch (err) { toast.error(err.message); }
@@ -128,7 +131,7 @@ export function ShareModal({ item, items, type, onClose }) {
                       boxShadow: isSelected ? '0 0 0 4px rgba(59,130,246,0.2)' : 'none',
                       transition: 'all 0.2s', overflow: 'hidden',
                     }}>
-                      {u.avatarUrl ? <img src={u.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : u.username.charAt(0).toUpperCase()}
+                      {u.avatarUrl ? <img src={getAvatarUrl(u.avatarUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : u.username.charAt(0).toUpperCase()}
                     </div>
                     <span style={{ fontSize: 12, fontWeight: isSelected ? 600 : 500, color: isSelected ? 'var(--text)' : 'var(--text-subtle)', maxWidth: 70, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {u.fullName || u.username}
@@ -166,16 +169,32 @@ export function ShareModal({ item, items, type, onClose }) {
             {t('share.publicLink', 'Public Link — Client Access')}
           </label>
           {!publicLink ? (
-            <button onClick={handleGenerateLink} disabled={generatingLink} style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px',
-              border: '1.5px dashed var(--border-active)', borderRadius: 'var(--r-md)',
-              background: 'none', color: 'var(--primary)', cursor: 'pointer',
-              fontFamily: 'var(--font)', fontWeight: 600, fontSize: 13, width: '100%',
-              justifyContent: 'center', transition: 'background 0.15s',
-            }}>
-              <Link2 size={15} />
-              {generatingLink ? t('share.generating', 'Generating…') : t('share.generateLink', 'Generate public link')}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select 
+                value={expiresInDays} 
+                onChange={(e) => setExpiresInDays(Number(e.target.value))}
+                style={{
+                  padding: '10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)',
+                  background: 'var(--surface)', color: 'var(--text)', fontFamily: 'var(--font)',
+                  fontSize: 13, outline: 'none'
+                }}
+              >
+                <option value={0}>{t('share.expireNever', 'Never expire')}</option>
+                <option value={1}>{t('share.expire1Day', '1 Day')}</option>
+                <option value={7}>{t('share.expire7Days', '7 Days')}</option>
+                <option value={30}>{t('share.expire30Days', '30 Days')}</option>
+              </select>
+              <button onClick={handleGenerateLink} disabled={generatingLink} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px',
+                border: '1.5px dashed var(--border-active)', borderRadius: 'var(--r-md)',
+                background: 'none', color: 'var(--primary)', cursor: 'pointer',
+                fontFamily: 'var(--font)', fontWeight: 600, fontSize: 13, flex: 1,
+                justifyContent: 'center', transition: 'background 0.15s',
+              }}>
+                <Link2 size={15} />
+                {generatingLink ? t('share.generating', 'Generating…') : t('share.generateLink', 'Generate public link')}
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'flex', gap: 8 }}>
               <div style={{

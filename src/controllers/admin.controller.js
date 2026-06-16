@@ -87,24 +87,45 @@ export const deleteUser = asyncHandler(async (req, res) => {
     where: { file: { ownerId: user.id } },
   });
   for (const v of versions) {
-    purgeFile(v.physicalPath);
+    await purgeFile(v.physicalPath);
   }
 
   await prisma.user.delete({ where: { id: user.id } }); // Cascade handles DB
   res.json({ status: 'success', message: 'User and all associated data permanently deleted' });
 });
 
+import fs from 'node:fs';
+import path from 'node:path';
+
+// Helper for simple file-based settings
+const SETTINGS_FILE = path.join(process.cwd(), 'system-settings.json');
+function getSettings() {
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+    }
+  } catch (e) {
+    // ignore
+  }
+  return {
+    serverCapacityBytes: (2 * 1024 * 1024 * 1024 * 1024).toString() // 2TB default
+  };
+}
+function saveSettings(settings) {
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+}
+
 // ─── GET /api/admin/security-logs ────────────────────────────────────────────
-// Returns recent virus detections from a security log model (uses AccessLog for now,
-// extended via structured logs emitted by errorHandler).
-// In a real deployment, integrate with a SIEM / log aggregator.
+// Returns analytics including storage usage
 export const getSecurityStats = asyncHandler(async (req, res) => {
-  const [totalUsers, activeUsers, totalFiles, totalStorageAgg] = await prisma.$transaction([
+  const [totalUsers, activeUsers, totalFiles, storageAgg] = await prisma.$transaction([
     prisma.user.count(),
     prisma.user.count({ where: { isActive: true } }),
     prisma.file.count({ where: { isTrashed: false } }),
-    prisma.user.aggregate({ _sum: { storageUsed: true } }),
+    prisma.user.aggregate({ _sum: { storageUsed: true, storageQuota: true } }),
   ]);
+
+  const settings = getSettings();
 
   res.json({
     status: 'success',
@@ -112,7 +133,21 @@ export const getSecurityStats = asyncHandler(async (req, res) => {
       totalUsers,
       activeUsers,
       totalFiles,
-      totalStorageUsedBytes: totalStorageAgg._sum.storageUsed?.toString() ?? '0',
+      totalStorageUsedBytes: storageAgg._sum.storageUsed?.toString() ?? '0',
+      totalStorageAllocatedBytes: storageAgg._sum.storageQuota?.toString() ?? '0',
+      serverCapacityBytes: settings.serverCapacityBytes
     },
   });
+});
+
+// ─── PATCH /api/admin/settings ───────────────────────────────────────────────
+export const updateSettings = asyncHandler(async (req, res) => {
+  const { serverCapacityBytes } = req.body;
+  if (!serverCapacityBytes) throw new BadRequestError('serverCapacityBytes is required');
+
+  const settings = getSettings();
+  settings.serverCapacityBytes = serverCapacityBytes.toString();
+  saveSettings(settings);
+
+  res.json({ status: 'success', settings });
 });

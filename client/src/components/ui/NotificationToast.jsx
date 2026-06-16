@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { MessageCircle, FolderOpen, File, X } from 'lucide-react';
+import { getAvatarUrl } from '../../utils/format.js';
 import styles from './NotificationToast.module.css';
 
 let _addNotification = null;
@@ -63,7 +64,7 @@ function NotificationCard({ notification, onDismiss }) {
     <div className={`${styles.card} ${visible ? styles.visible : ''}`}>
       <div className={styles.avatar}>
         {sharer?.avatarUrl ? (
-          <img src={sharer.avatarUrl} alt="" className={styles.avatarImg} />
+          <img src={getAvatarUrl(sharer.avatarUrl)} alt="" className={styles.avatarImg} />
         ) : (
           <span className={styles.avatarInitial}>{initial}</span>
         )}

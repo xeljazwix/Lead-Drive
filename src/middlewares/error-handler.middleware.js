@@ -43,6 +43,7 @@ export function errorHandler(err, req, res, _next) {
 
   // Unhandled / programmer errors — never expose internals
   logger.error('Unhandled error', { message: err.message, stack: err.stack, path: req.path });
+  import('fs').then(fs => fs.appendFileSync('api-error.log', `[${new Date().toISOString()}] ${req.path}\n${err.stack}\n\n`));
   return res.status(500).json({
     status: 'error',
     message: 'An unexpected internal error occurred',

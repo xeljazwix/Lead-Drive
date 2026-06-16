@@ -10,7 +10,7 @@
   padding: 14px 16px;
   border-radius: var(--r-md);
   background: var(--surface);
-  box-shadow: -6px -6px 14px #ffffff, 8px 8px 20px #9daabe;
+  box-shadow: var(--shadow-raised);
   animation: slideIn 0.2s ease;
   border-left: 4px solid transparent;
 }

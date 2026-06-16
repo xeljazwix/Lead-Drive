@@ -119,9 +119,10 @@
     position: fixed;
     bottom: 16px;
     top: auto;
-    left: 50%;
-    transform: translateX(-50%);
-    width: auto;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    width: fit-content;
     max-width: calc(100% - 32px);
     height: auto;
     min-height: 0;

@@ -105,7 +105,8 @@ export const uploadAvatar = asyncHandler(async (req, res) => {
     throw new BadRequestError('File must be an image');
   }
 
-  const ext = path.extname(file.originalname);
+  const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+  const ext = path.extname(originalName);
   const newFilename = `${userId}-${Date.now()}${ext}`;
   const destPath = path.join(process.cwd(), 'public', 'uploads', 'avatars', newFilename);
 

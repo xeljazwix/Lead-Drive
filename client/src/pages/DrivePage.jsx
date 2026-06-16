@@ -1,5 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/auth.store.js';
 import { useDriveStore } from '../store/drive.store.js';
 import { foldersApi, filesApi } from '../api/drive.js';
 import { Header } from '../components/layout/Header.jsx';
@@ -16,44 +18,56 @@ import { toast } from '../components/ui/Toast.jsx';
 import { nanoid } from '../utils/nanoid.js';
 import { useDriveData } from '../hooks/useDriveData.js';
 import { useModals } from '../hooks/useModals.js';
-import { FolderPlus, Upload } from 'lucide-react';
+import { ArrowLeft, FolderPlus, Upload } from 'lucide-react';
 import { BulkToolbar } from '../components/drive/BulkToolbar.jsx';
 import { FileViewerModal } from '../components/drive/FileViewerModal.jsx';
 import { previewFile } from '../utils/previewFile.js';
 import { FilterBar } from '../components/drive/FilterBar.jsx';
 import { processDriveItems } from '../utils/sortAndFilter.js';
-import { useMemo } from 'react';
+import { useDragSelect } from '../hooks/useDragSelect.js';
 import { useTranslation } from 'react-i18next';
 import styles from './DrivePage.module.css';
 
 export function DrivePage() {
   const { t } = useTranslation();
+  const refreshUser = useAuthStore((state) => state.refreshUser);
   const {
-    currentFolder, navigateToRoot, navigateTo, addUpload, updateUpload, removeUpload,
+    currentFolder, navigateToRoot, navigateTo, navigateUp, addUpload, updateUpload, removeUpload,
     selected, selectAll, clearSelection, clipboard, setClipboard, clearClipboard,
-    filterType, sortBy
+    filterType, sortBy, breadcrumb
   } = useDriveStore();
   const { folders: rawFolders, files: rawFiles, loading, reload } = useDriveData(currentFolder);
   const { folders, files } = useMemo(() => processDriveItems(rawFolders, rawFiles, filterType, sortBy), [rawFolders, rawFiles, filterType, sortBy]);
   const { modal, openModal, closeModal } = useModals();
   const fileInputRef = useRef(null);
+  const driveContainerRef = useRef(null);
+  const itemsList = useMemo(() => [...folders, ...files], [folders, files]);
+  const selectionBox = useDragSelect(driveContainerRef, itemsList);
 
   function handleFolderOpen(folder) { clearSelection(); navigateTo(folder); }
   function handleNavigateRoot()     { clearSelection(); navigateToRoot(); }
+  function handleNavigateBack() {
+    clearSelection();
+    if (breadcrumb.length <= 1) {
+      navigateToRoot();
+      return;
+    }
+    navigateUp(breadcrumb.length - 2);
+  }
   function handleBreadcrumbNav(folder) { clearSelection(); navigateTo(folder); }
 
   async function handleFolderTrash(folder) {
-    try { await foldersApi.trash(folder.id); toast.success('Folder moved to trash'); reload(); }
+    try { await foldersApi.trash(folder.id); toast.success(t('toast.folderMovedToTrash', 'Folder moved to trash')); reload(); refreshUser(); }
     catch (err) { toast.error(err.message); }
   }
 
   async function handleFileTrash(file) {
-    try { await filesApi.trash(file.id); toast.success('Moved to trash'); reload(); }
+    try { await filesApi.trash(file.id); toast.success(t('toast.movedToTrash', 'Moved to trash')); reload(); refreshUser(); }
     catch (err) { toast.error(err.message); }
   }
 
   async function handleFileStar(file) {
-    try { await filesApi.star(file.id); reload(); }
+    try { await filesApi.star(file.id); reload(); refreshUser(); }
     catch (err) { toast.error(err.message); }
   }
 
@@ -74,7 +88,7 @@ export function DrivePage() {
         });
         updateUpload(id, { progress: 100, status: 'done' });
         toast.success(`${file.name} uploaded`);
-        reload();
+        reload(); refreshUser();
       } catch (err) {
         updateUpload(id, { status: 'error', error: err.message });
         toast.error(`${file.name}: ${err.message}`);
@@ -129,7 +143,7 @@ export function DrivePage() {
             toast.success(`Moved ${clipboard.items.length} items`);
             clearClipboard();
           }
-          reload();
+          reload(); refreshUser();
         } catch (err) {
           toast.error(`Paste failed: ${err.message}`);
         }
@@ -158,7 +172,7 @@ export function DrivePage() {
     try {
       await filesApi.compress({ fileIds, folderIds, destFolderId: currentFolder?.id });
       toast.success('Archive created successfully');
-      reload();
+      reload(); refreshUser();
     } catch (err) {
       toast.error(`Compression failed: ${err.message}`);
     }
@@ -169,7 +183,7 @@ export function DrivePage() {
     try {
       await filesApi.extract(file.id, { destFolderId: currentFolder?.id });
       toast.success('Archive extracted successfully');
-      reload();
+      reload(); refreshUser();
     } catch (err) {
       toast.error(`Extraction failed: ${err.message}`);
     }
@@ -198,7 +212,7 @@ export function DrivePage() {
     if (successCount > 0) toast.success(`Moved ${successCount} items to trash`);
     if (errorCount > 0) toast.error(`Failed to move ${errorCount} items`);
     clearSelection();
-    reload();
+    reload(); refreshUser();
   }
 
   async function handleBulkStar() {
@@ -216,7 +230,7 @@ export function DrivePage() {
     }
     toast.success(`Updated star status for ${successCount} files`);
     clearSelection();
-    reload();
+    reload(); refreshUser();
   }
 
   function handleBulkDownload() {
@@ -256,9 +270,52 @@ export function DrivePage() {
       if (folderIds.length > 0) await foldersApi.move({ folderIds, targetFolderId });
       toast.success(`Moved ${draggedItems.length} items`);
       clearSelection();
-      reload();
+      reload(); refreshUser();
     } catch (err) {
       toast.error(`Move failed: ${err.message}`);
+    }
+  }
+
+  function handleCopy() {
+    const selectedItemsList = [
+      ...folders.filter(f => selected.has(f.id)).map(f => ({ id: f.id, type: 'folder' })),
+      ...files.filter(f => selected.has(f.id)).map(f => ({ id: f.id, type: 'file' }))
+    ];
+    if (selectedItemsList.length === 0) return;
+    setClipboard('copy', selectedItemsList);
+    toast.success(`Copied ${selectedItemsList.length} items to clipboard`);
+    clearSelection();
+  }
+
+  function handleCut() {
+    const selectedItemsList = [
+      ...folders.filter(f => selected.has(f.id)).map(f => ({ id: f.id, type: 'folder' })),
+      ...files.filter(f => selected.has(f.id)).map(f => ({ id: f.id, type: 'file' }))
+    ];
+    if (selectedItemsList.length === 0) return;
+    setClipboard('cut', selectedItemsList);
+    toast.success(`Cut ${selectedItemsList.length} items to clipboard`);
+    clearSelection();
+  }
+
+  async function handlePaste() {
+    if (!clipboard.action || clipboard.items.length === 0) return;
+    const fileIds = clipboard.items.filter(i => i.type === 'file').map(i => i.id);
+    const folderIds = clipboard.items.filter(i => i.type === 'folder').map(i => i.id);
+    try {
+      if (clipboard.action === 'copy') {
+        if (fileIds.length > 0) await filesApi.copy({ fileIds, targetFolderId: currentFolder?.id });
+        if (folderIds.length > 0) await foldersApi.copy({ folderIds, targetFolderId: currentFolder?.id });
+        toast.success(`Pasted ${clipboard.items.length} items`);
+      } else if (clipboard.action === 'cut') {
+        if (fileIds.length > 0) await filesApi.move({ fileIds, targetFolderId: currentFolder?.id });
+        if (folderIds.length > 0) await foldersApi.move({ folderIds, targetFolderId: currentFolder?.id });
+        toast.success(`Moved ${clipboard.items.length} items`);
+        clearClipboard();
+      }
+      reload(); refreshUser();
+    } catch (err) {
+      toast.error(`Paste failed: ${err.message}`);
     }
   }
 
@@ -274,11 +331,17 @@ export function DrivePage() {
   const selectedFilesCount = files.filter(f => selected.has(f.id)).length;
   const totalSelectedCount = selected.size;
 
+  const showBackButton = Boolean(currentFolder);
   const headerActions = (
     <div className={styles.desktopActions}>
       {allIdsInView.length > 0 && (
         <Button variant="ghost" size="sm" onClick={handleSelectAllToggle}>
           {allSelected ? t('drive.clearSelection') : t('drive.selectAll')}
+        </Button>
+      )}
+      {clipboard.items.length > 0 && (
+        <Button variant="secondary" size="sm" onClick={handlePaste} title={t('drive.paste', 'Paste')}>
+          {t('drive.paste', 'Paste')} ({clipboard.items.length})
         </Button>
       )}
       <Button variant="ghost" icon={<FolderPlus size={16} />} size="sm" onClick={() => openModal('newFolder')}>{t('drive.newFolder')}</Button>
@@ -290,6 +353,11 @@ export function DrivePage() {
 
   const fabActions = (
     <div className={styles.fabContainer}>
+      {clipboard.items.length > 0 && (
+        <button className={styles.fabSecondary} onClick={handlePaste} aria-label={t('drive.paste', 'Paste')} title={t('drive.paste', 'Paste')}>
+          <span style={{ fontSize: 12, fontWeight: 600 }}>{t('drive.paste', 'Paste')}</span>
+        </button>
+      )}
       <button className={styles.fabSecondary} onClick={() => openModal('newFolder')} aria-label="New folder">
         <FolderPlus size={20} />
       </button>
@@ -302,29 +370,53 @@ export function DrivePage() {
   return (
     <>
       <Header title={t('nav.myDrive')} actions={headerActions} />
-      <BreadCrumb onNavigateRoot={handleNavigateRoot} onNavigateTo={handleBreadcrumbNav} />
-      <DropZone onFiles={uploadFiles}>
-        <FileGrid
-          folders={folders} files={files} loading={loading}
-          onFolderOpen={handleFolderOpen}
-          onFolderRename={(f) => openModal('rename', f)}
-          onFolderTrash={handleFolderTrash}
-          onFolderShare={(f) => openModal('share', f, 'folder')}
-          onFolderCompress={(f) => handleCompress([], [f.id])}
-          onFolderDownload={(f) => { toast('Preparing folder download...'); filesApi.downloadZip([], [f.id]); }}
-          onFileStar={handleFileStar}
-          onFileTrash={handleFileTrash}
-          onFileShare={(f) => openModal('share', f, 'file')}
-          onFileVersions={(f) => openModal('versions', f)}
-          onFileDownload={(f) => filesApi.download(f.id, f.name, toast)}
-          onFilePreview={(f) => previewFile(f, openModal).catch(err => toast.error(err.message))}
-          onFileCompress={(f) => handleCompress([f.id], [])}
-          onFileExtract={handleExtract}
-          onMoveToFolder={handleMoveToFolder}
-        />
-      </DropZone>
+      <BreadCrumb
+        showBackButton={showBackButton}
+        onNavigateRoot={handleNavigateRoot}
+        onNavigateBack={handleNavigateBack}
+        onNavigateTo={handleBreadcrumbNav}
+      />
+      <div ref={driveContainerRef} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {selectionBox && createPortal(
+          <div style={{
+            position: 'fixed',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            left: selectionBox.left,
+            top: selectionBox.top,
+            width: selectionBox.width,
+            height: selectionBox.height,
+            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+            border: '1px solid rgba(59, 130, 246, 0.8)',
+            borderRadius: 2
+          }} />,
+          document.body
+        )}
+        <DropZone onFiles={uploadFiles}>
+          <FileGrid
+            folders={folders} files={files} loading={loading}
+            containerRef={driveContainerRef}
+            selectionBox={selectionBox}
+            onFolderOpen={handleFolderOpen}
+            onFolderRename={(f) => openModal('rename', f)}
+            onFolderTrash={handleFolderTrash}
+            onFolderShare={(f) => openModal('share', f, 'folder')}
+            onFolderCompress={(f) => handleCompress([], [f.id])}
+            onFolderDownload={(f) => { toast('Preparing folder download...'); filesApi.downloadZip([], [f.id]); }}
+            onFileStar={handleFileStar}
+            onFileTrash={handleFileTrash}
+            onFileShare={(f) => openModal('share', f, 'file')}
+            onFileVersions={(f) => openModal('versions', f)}
+            onFileDownload={(f) => filesApi.download(f.id, f.name, toast)}
+            onFilePreview={(f) => previewFile(f, openModal).catch(err => toast.error(err.message))}
+            onFileCompress={(f) => handleCompress([f.id], [])}
+            onFileExtract={handleExtract}
+            onMoveToFolder={handleMoveToFolder}
+          />
+        </DropZone>
+      </div>
 
-      {fabActions}
+      {createPortal(fabActions, document.body)}
 
       <BulkToolbar
         selectedCount={totalSelectedCount}
@@ -335,6 +427,8 @@ export function DrivePage() {
         onDownload={handleBulkDownload}
         onShare={handleBulkShare}
         onCompress={handleBulkCompress}
+        onCopy={handleCopy}
+        onCut={handleCut}
         onTrash={handleBulkTrash}
       />
 
@@ -377,7 +471,7 @@ function NewFolderModal({ currentFolder, onClose, onCreated }) {
     setLoading(true);
     try {
       await foldersApi.create({ name: name.trim(), parentFolderId: currentFolder?.id });
-      toast.success('Folder created');
+      toast.success(t('toast.folderCreated', 'Folder created'));
       onCreated();
       onClose();
     } catch (err) {

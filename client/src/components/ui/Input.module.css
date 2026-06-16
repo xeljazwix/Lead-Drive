@@ -21,7 +21,14 @@
   border-radius: var(--r-md);
   box-shadow: var(--shadow-inset);
   outline: none;
-  transition: box-shadow var(--t-base);
+  transition: box-shadow var(--t-base), background-color var(--t-base), color var(--t-base);
+}
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text) !important;
+  -webkit-box-shadow: var(--shadow-inset) !important;
+  transition: background-color 9999s ease-in-out 0s;
 }
 .input::placeholder { color: var(--text-muted); }
 .input:focus {

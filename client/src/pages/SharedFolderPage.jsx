@@ -78,7 +78,7 @@ export function SharedFolderPage() {
       </div>
 
       <div className={styles.container}>
-        {loading && <p className={styles.msg}>{t('admin.loading')}</p>}
+        {loading && <Loader fullScreen={false} text={t('admin.loading')} />}
 
         {!loading && folders.length === 0 && files.length === 0 && (
           <p className={styles.msg}>{t('drive.empty') || 'This folder is empty.'}</p>

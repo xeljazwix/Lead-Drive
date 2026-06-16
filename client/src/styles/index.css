@@ -2,6 +2,8 @@
    NEUMORPHIC CLOUD DRIVE — DESIGN SYSTEM
    ═══════════════════════════════════════════════════════════════════════════ */
 
+@import './animations.css';
+
 /* ─── CSS Variables ──────────────────────────────────────────────────────── */
 :root {
   /* Surface — every element is "carved" from this single base color */
@@ -186,7 +188,7 @@ body {
   font-family: var(--font);
   background: var(--surface);
   color: var(--text);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 

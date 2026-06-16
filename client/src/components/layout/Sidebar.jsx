@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store.js';
 import { useDriveStore } from '../../store/drive.store.js';
-import { formatBytes, quotaPercent } from '../../utils/format.js';
+import { formatBytes, quotaPercent, getAvatarUrl } from '../../utils/format.js';
 import { Folder, Clock, Star, Trash2, ShieldCheck, LogOut, Users, Settings, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../../store/chat.store.js';
@@ -34,7 +34,7 @@ export function Sidebar() {
   const { clearSelection } = useDriveStore();
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} animate-slide-start`}>
       {/* Logo */}
       <div className={styles.logo}>
         <div className={styles.logoSvg} aria-label="Lead Drive Logo" title="Lead Drive" />
@@ -94,14 +94,14 @@ export function Sidebar() {
           />
         </div>
         <p className={styles.quotaText}>
-          {formatBytes(user?.storageUsed)} {t('quota.of')} {formatBytes(user?.storageQuota)} {t('quota.used')}
+          <span dir="ltr" style={{ display: 'inline-block' }}>{formatBytes(user?.storageUsed)}</span> {t('quota.of')} <span dir="ltr" style={{ display: 'inline-block' }}>{formatBytes(user?.storageQuota)}</span> {t('quota.used')}
         </p>
       </div>
 
       {/* User + Logout */}
       <div className={styles.user}>
         {user?.avatarUrl ? (
-          <img src={user.avatarUrl} alt="Avatar" className={styles.avatarImg} />
+          <img src={getAvatarUrl(user.avatarUrl)} alt="Avatar" className={styles.avatarImg} />
         ) : (
           <div className={styles.avatar}>{user?.fullName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase()}</div>
         )}

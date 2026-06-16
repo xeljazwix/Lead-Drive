@@ -52,11 +52,20 @@
     "currentPassword": "Current Password",
     "newPassword": "New Password",
     "confirmPassword": "Confirm Password",
-    "updatePassword": "Update Password"
+    "updatePassword": "Update Password",
+    "reservedQuota": "Reserved Quota",
+    "actualUsage": "Actual Usage",
+    "serverCapacity": "Server Capacity",
+    "totalCapacityGb": "Total Capacity (GB)",
+    "updateCapacityHint": "Update this to match your actual server drive capacity so the analytics stay accurate.",
+    "serverCapacityUpdated": "Server capacity updated",
+    "serverAnalytics": "Server Analytics",
+    "editCapacity": "Edit Capacity"
   },
   "drive": {
     "upload": "Upload",
     "newFolder": "New Folder",
+    "back": "Back",
     "delete": "Delete",
     "star": "Star",
     "removeStar": "Remove Star",
@@ -130,7 +139,17 @@
     "copyLink": "Copy",
     "copied": "Copied!",
     "linkHint": "Anyone with this link can view and download without logging in.",
-    "permission": "Permission"
+    "permission": "Permission",
+    "expireNever": "Never expire",
+    "expire1Day": "1 Day",
+    "expire7Days": "7 Days",
+    "expire30Days": "30 Days",
+    "expiresIn": "Link expires in {{time}}",
+    "day": "day",
+    "days": "days",
+    "hour": "hour",
+    "hours": "hours",
+    "expired": "Expired"
   },
   "publicPage": {
     "sharedWithYou": "Shared with you",

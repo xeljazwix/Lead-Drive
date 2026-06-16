@@ -9,6 +9,8 @@
  * @param {function} openModal - (type, data) => void   from useModals()
  */
 
+import { BASE } from '../api/client.js';
+
 const FULLSCREEN_TYPES = new Set([
   'application/pdf',
   'application/vnd.ms-powerpoint',
@@ -26,7 +28,7 @@ function isFullscreenType(mimeType) {
 
 async function openInNewTab(fileId) {
   const token = localStorage.getItem('cd_token');
-  const res = await fetch(`/api/files/${fileId}/download`, {
+  const res = await fetch(`${BASE}/files/${fileId}/download`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {

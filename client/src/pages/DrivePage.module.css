@@ -8,10 +8,10 @@
 .fabContainer {
   display: none;
   position: fixed;
-  bottom: 80px; /* Above the bottom nav */
+  bottom: 112px; /* Above the bottom nav */
   right: 16px;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px; /* Tighter space between FABs */
   z-index: 900;
 }
 

@@ -3,6 +3,7 @@ import { MessageCircle, FolderOpen, File, Trash2, Bell } from 'lucide-react';
 import { useChatStore } from '../../store/chat.store.js';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { getAvatarUrl } from '../../utils/format.js';
 import styles from './NotificationsPanel.module.css';
 
 function timeAgo(id) {
@@ -90,7 +91,7 @@ function NotificationRow({ n, onClose }) {
     <button className={styles.row} onClick={handleClick}>
       <div className={styles.avatar}>
         {sharer?.avatarUrl ? (
-          <img src={sharer.avatarUrl} alt="" className={styles.avatarImg} />
+          <img src={getAvatarUrl(sharer.avatarUrl)} alt="" className={styles.avatarImg} />
         ) : (
           <span className={styles.avatarInitial}>{initial}</span>
         )}

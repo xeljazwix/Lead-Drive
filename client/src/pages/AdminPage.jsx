@@ -17,6 +17,7 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [newUserModal, setNewUserModal] = useState(false);
   const [quotaModal, setQuotaModal]   = useState(null);
+  const [settingsModal, setSettingsModal] = useState(false);
 
   function loadAll() {
     setLoading(true);
@@ -67,6 +68,36 @@ export function AdminPage() {
           </div>
         )}
 
+        {/* Analytics Bars */}
+        {stats && (
+          <div className={styles.analyticsCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 className={styles.tableTitle} style={{ margin: 0 }}>{t('admin.serverAnalytics', 'Server Analytics')}</h2>
+              <Button size="sm" variant="ghost" onClick={() => setSettingsModal(true)}>{t('admin.editCapacity', 'Edit Capacity')}</Button>
+            </div>
+            
+            <div className={styles.progressBarContainer}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: 'var(--text-subtle)', marginBottom: 8 }}>
+                <span>{t('admin.reservedQuota', 'Reserved Quota')}</span>
+                <span dir="ltr">{formatBytes(stats.totalStorageAllocatedBytes)} / {formatBytes(stats.serverCapacityBytes)}</span>
+              </div>
+              <div className={styles.progressBar}>
+                <div className={styles.progressFill} style={{ width: `${Math.min(100, (Number(stats.totalStorageAllocatedBytes) / Number(stats.serverCapacityBytes)) * 100)}%`, background: 'var(--primary)' }} />
+              </div>
+            </div>
+
+            <div className={styles.progressBarContainer} style={{ marginTop: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: 'var(--text-subtle)', marginBottom: 8 }}>
+                <span>{t('admin.actualUsage', 'Actual Usage')}</span>
+                <span dir="ltr">{formatBytes(stats.totalStorageUsedBytes)} / {formatBytes(stats.serverCapacityBytes)}</span>
+              </div>
+              <div className={styles.progressBar}>
+                <div className={styles.progressFill} style={{ width: `${Math.min(100, (Number(stats.totalStorageUsedBytes) / Number(stats.serverCapacityBytes)) * 100)}%`, background: 'var(--accent)' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Users Table */}
         <div className={styles.tableCard}>
           <h2 className={styles.tableTitle}>{t('admin.users')}</h2>
@@ -83,7 +114,7 @@ export function AdminPage() {
                     <tr key={u.id} className={!u.isActive ? styles.inactive : ''}>
                       <td className={styles.username}>{u.username}</td>
                       <td><span className={`${styles.badge} ${u.role === 'SUPER_ADMIN' ? styles.admin : ''}`}>{u.role}</span></td>
-                      <td>{formatBytes(u.storageUsed)} / {formatBytes(u.storageQuota)}</td>
+                      <td><div dir="ltr" style={{ display: 'inline-block' }}>{formatBytes(u.storageUsed)} / {formatBytes(u.storageQuota)}</div></td>
                       <td><span className={`${styles.status} ${u.isActive ? styles.active : styles.inactive}`}>{u.isActive ? t('admin.active') : t('admin.inactive')}</span></td>
                       <td className={styles.actions}>
                         <button className={styles.actionBtn} onClick={() => setQuotaModal(u)} title={t('admin.editQuota')}>
@@ -109,6 +140,7 @@ export function AdminPage() {
 
       {newUserModal && <NewUserModal onClose={() => setNewUserModal(false)} onCreated={loadAll} />}
       {quotaModal   && <QuotaModal user={quotaModal} onClose={() => setQuotaModal(null)} onUpdated={loadAll} />}
+      {settingsModal && stats && <SettingsModal currentCapacity={stats.serverCapacityBytes} onClose={() => setSettingsModal(false)} onUpdated={loadAll} />}
     </>
   );
 }
@@ -175,6 +207,35 @@ function QuotaModal({ user, onClose, onUpdated }) {
       footer={<><Button variant="ghost" onClick={onClose}>{t('admin.cancel')}</Button><Button onClick={handleUpdate} loading={loading}>{t('admin.save')}</Button></>}
     >
       <Input label={t('admin.storageQuotaGB')} type="number" min="1" max="10000" value={gb} onChange={e => setGb(e.target.value)} />
+    </Modal>
+  );
+}
+
+// ─── Settings Modal ───────────────────────────────────────────────────────────
+function SettingsModal({ currentCapacity, onClose, onUpdated }) {
+  const { t } = useTranslation();
+  const [gb, setGb] = useState(String(Math.round(Number(currentCapacity) / 1073741824)));
+  const [loading, setLoading] = useState(false);
+
+  async function handleUpdate() {
+    setLoading(true);
+    try {
+      const bytes = String(Math.round(parseFloat(gb) * 1073741824));
+      await adminApi.updateSettings({ serverCapacityBytes: bytes });
+      toast.success('Server capacity updated');
+      onUpdated(); onClose();
+    } catch (err) { toast.error(err.message); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={t('admin.serverCapacity', 'Server Capacity')}
+      footer={<><Button variant="ghost" onClick={onClose}>{t('admin.cancel')}</Button><Button onClick={handleUpdate} loading={loading}>{t('admin.save')}</Button></>}
+    >
+      <Input label={t('admin.totalCapacityGb', 'Total Capacity (GB)')} type="number" min="1" value={gb} onChange={e => setGb(e.target.value)} />
+      <p style={{ fontSize: 13, color: 'var(--text-subtle)', marginTop: 8 }}>
+        {t('admin.updateCapacityHint', 'Update this to match your actual server drive capacity so the analytics stay accurate.')}
+      </p>
     </Modal>
   );
 }

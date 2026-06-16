@@ -12,40 +12,21 @@ function getPreviewType(mimeType) {
   return 'icon';
 }
 
+import { BASE } from '../../api/client.js';
+
 async function fetchBlob(fileId) {
   const token = localStorage.getItem('cd_token');
-  const res = await fetch(`/api/files/${fileId}/download`, {
+  const res = await fetch(`${BASE}/files/${fileId}/thumbnail`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.blob();
 }
 
-/** Captures the first rendered video frame on a canvas → data URL */
-async function grabVideoFrame(blob) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob);
-    const video = document.createElement('video');
-    video.muted = true;
-    video.playsInline = true;
-    video.src = url;
-
-    video.onloadeddata = () => { video.currentTime = 0; };
-    video.onseeked = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width  = video.videoWidth  || 320;
-      canvas.height = video.videoHeight || 180;
-      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
-    };
-    video.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Video load error')); };
-  });
-}
-
 export function FileThumbnail({ file }) {
   const [thumb, setThumb]   = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError]   = useState(false);
   const containerRef        = useRef(null);
   const fetchedRef          = useRef(false);
 
@@ -66,13 +47,11 @@ export function FileThumbnail({ file }) {
 
         fetchBlob(file.id)
           .then(blob => {
-            if (previewType === 'image') {
-              setThumb(URL.createObjectURL(blob));
-            } else if (previewType === 'video') {
-              return grabVideoFrame(blob).then(dataUrl => setThumb(dataUrl));
-            }
+            setThumb(URL.createObjectURL(blob));
           })
-          .catch(() => {/* fall back to icon silently */});
+          .catch(() => {
+            setError(true);
+          });
       },
       { rootMargin: '100px' }
     );
@@ -108,6 +87,15 @@ export function FileThumbnail({ file }) {
         <span className={styles.iconOverlay}>
           <FileTypeIcon mimeType={file.mimeType} filename={file.name} size={22} />
         </span>
+      </div>
+    );
+  }
+
+  /* ── Fallback Icon (Error or Document) ──────────────────────────── */
+  if (error || previewType === 'icon') {
+    return (
+      <div className={styles.audioThumb} style={{ background: `${accentColor}10` }} ref={containerRef}>
+        <FileTypeIcon mimeType={file.mimeType} filename={file.name} size={36} />
       </div>
     );
   }

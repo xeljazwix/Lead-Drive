@@ -3,16 +3,16 @@ import { getExtension } from '../../utils/mime.js';
 import { formatBytes, formatDate } from '../../utils/format.js';
 import { ContextMenu } from '../ui/ContextMenu.jsx';
 import { useDriveStore } from '../../store/drive.store.js';
-import { Download, Star, Share2, History, Trash2, RotateCcw, Archive, Package } from 'lucide-react';
+import { Download, Star, Share2, History, Trash2, RotateCcw, Archive, Package, Copy, Scissors } from 'lucide-react';
 import { FileThumbnail } from './FileThumbnail.jsx';
 import { FileTypeIcon, getFileColor } from './FileTypeIcon.jsx';
 import { useTranslation } from 'react-i18next';
 import styles from './FileCard.module.css';
 
-export function FileCard({ file, onStar, onTrash, onShare, onVersions, onDownload, onPreview, onRestore, onHardDelete, onCompress, onExtract, isTrash, view, itemsList }) {
+export function FileCard({ file, onStar, onTrash, onShare, onVersions, onDownload, onPreview, onRestore, onHardDelete, onCompress, onExtract, isTrash, view, itemsList, index = 0 }) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState(null);
-  const { selected, selectItem, clipboard } = useDriveStore();
+  const { selected, selectItem, clipboard, setClipboard } = useDriveStore();
   const isSelected = selected.has(file.id);
   const isCut = clipboard.action === 'cut' && clipboard.items.some(i => i.id === file.id);
   const ext        = getExtension(file.name);
@@ -32,6 +32,9 @@ export function FileCard({ file, onStar, onTrash, onShare, onVersions, onDownloa
     { icon: <Star size={14} />,     label: file.isStarred ? t('drive.removeStar') : t('drive.star'), onClick: () => onStar(file) },
     { icon: <Share2 size={14} />,   label: t('drive.share'),           onClick: () => onShare(file) },
     { icon: <History size={14} />,  label: t('modals.versionHistory'), onClick: () => onVersions(file) },
+    { divider: true },
+    { icon: <Copy size={14} />,     label: t('drive.copy', 'Copy'),    onClick: () => setClipboard('copy', [{ id: file.id, type: 'file' }]) },
+    { icon: <Scissors size={14} />, label: t('drive.cut', 'Cut'),      onClick: () => setClipboard('cut', [{ id: file.id, type: 'file' }]) },
     { divider: true },
     { icon: <Trash2 size={14} />,   label: t('drive.delete'),   onClick: () => onTrash(file), danger: true },
   ];
@@ -112,7 +115,7 @@ export function FileCard({ file, onStar, onTrash, onShare, onVersions, onDownloa
     return (
       <>
         <div
-          className={`${styles.row} ${isSelected ? styles.selected : ''}`}
+          className={`${styles.row} ${isSelected ? styles.selected : ''} animate-pop-in stagger-${(index % 10) + 1}`}
           style={{ opacity: isCut ? 0.5 : 1 }}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
@@ -146,7 +149,7 @@ export function FileCard({ file, onStar, onTrash, onShare, onVersions, onDownloa
   return (
     <>
       <div
-        className={`${styles.card} ${isSelected ? styles.selected : ''}`}
+        className={`${styles.card} ${isSelected ? styles.selected : ''} animate-pop-in stagger-${(index % 10) + 1}`}
         style={{ opacity: isCut ? 0.5 : 1 }}
         onClick={handleClick}
         onContextMenu={handleContext}

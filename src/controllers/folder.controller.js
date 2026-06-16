@@ -1,9 +1,9 @@
 import prisma from '../utils/prisma.js';
-import fs from 'node:fs';
 import { asyncHandler } from '../utils/helpers.js';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../utils/errors.js';
 import { getIo } from '../socket.js';
 import * as pushService from '../services/push.service.js';
+import { buildStoragePath, copyStorageFile } from '../services/worm.service.js';
 
 // ─── Helper: transitively soft-delete a folder and all its contents ───────────
 async function trashFolderRecursive(folderId, trashedAt, tx) {
@@ -236,8 +236,7 @@ async function copyFolderRecursive(folderId, targetParentFolderId, userId, isTop
     });
 
     const newStoragePath = buildStoragePath(userId, newFile.id, 1, newFile.name);
-    fs.copyFileSync(latestVersion.physicalPath, newStoragePath);
-    lockFile(newStoragePath);
+    await copyStorageFile(latestVersion.physicalPath, newStoragePath);
 
     await prisma.fileVersion.create({
       data: {

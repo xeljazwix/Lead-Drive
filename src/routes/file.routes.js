@@ -4,7 +4,7 @@ import {
   trashFile, restoreFromTrash, toggleStar, shareFile,
   getStarred, getTrashed, getRecent, getSharedWithMe, search,
   copyFiles, moveFiles, emptyTrash, hardDeleteFile, scanBeforeDownload,
-  downloadZip, compressItems, extractZip
+  downloadZip, compressItems, extractZip, getThumbnail
 } from '../controllers/file.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/upload.middleware.js';
@@ -35,6 +35,7 @@ router.get('/download/zip', downloadZip);
 // Per-file operations
 router.get('/:id/scan',           scanBeforeDownload);
 router.get('/:id/download',       downloadFile);
+router.get('/:id/thumbnail',      getThumbnail);
 router.post('/:id/extract',       extractZip);
 router.get('/:id/versions',       getVersions);
 router.post('/:id/restore',       restoreVersion);

@@ -1,7 +1,11 @@
 import prisma from '../utils/prisma.js';
+import fs from 'node:fs';
 import { scanFile } from '../services/clamav.service.js';
 import * as pushService from '../services/push.service.js';
-import { buildStoragePath, promoteToStorage, purgeFile, purgeTempFile } from '../services/worm.service.js';
+import {
+  buildStoragePath, promoteToStorage, purgeFile, purgeTempFile,
+  copyStorageFile, streamToResponse, streamRangeToResponse
+} from '../services/worm.service.js';
 import { computeChecksum, asyncHandler } from '../utils/helpers.js';
 import {
   BadRequestError, NotFoundError, ForbiddenError,
@@ -9,8 +13,14 @@ import {
 } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { getIo } from '../socket.js';
-import fs from 'node:fs';
 import { prepareZipItems, createZipStream, compressToDrive, extractFromDrive } from '../services/archive.service.js';
+import sharp from 'sharp';
+import path from 'node:path';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegStatic from 'ffmpeg-static';
+
+// Set ffmpeg path
+ffmpeg.setFfmpegPath(ffmpegStatic);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -74,9 +84,12 @@ export const uploadFile = asyncHandler(async (req, res) => {
   let version;
   try {
     await prisma.$transaction(async (tx) => {
+      // Fix multer latin1 parsing of utf8 filenames
+      const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+
       // Check if a file with same name exists in folder (create new version)
       fileRecord = await tx.file.findFirst({
-        where: { name: req.file.originalname, folderId: folderId ?? null, ownerId: userId, isTrashed: false },
+        where: { name: originalName, folderId: folderId ?? null, ownerId: userId, isTrashed: false },
         include: { versions: { orderBy: { versionNumber: 'desc' }, take: 1 } },
       });
 
@@ -92,7 +105,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
         // Brand new file record
         fileRecord = await tx.file.create({
           data: {
-            name: req.file.originalname,
+            name: originalName,
             mimeType: req.file.mimetype,
             size: fileSize,
             ownerId: userId,
@@ -101,7 +114,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
         });
       }
 
-      const storagePath = buildStoragePath(userId, fileRecord.id, versionNumber, req.file.originalname);
+      const storagePath = buildStoragePath(userId, fileRecord.id, versionNumber, originalName);
       version = await tx.fileVersion.create({
         data: {
           fileId: fileRecord.id,
@@ -120,7 +133,45 @@ export const uploadFile = asyncHandler(async (req, res) => {
       return { fileRecord, version };
     });
 
+    // Generate thumbnail before promoting to storage so tempPath isn't deleted
+    if (req.file.mimetype.startsWith('image/')) {
+      try {
+        const thumbDir = path.join(process.env.STORAGE_DIR ?? './storage', 'thumbnails');
+        fs.mkdirSync(thumbDir, { recursive: true });
+        const thumbPath = path.join(thumbDir, `${fileRecord.id}.webp`);
+        await sharp(tempPath)
+          .resize(150, 150, { fit: 'cover' })
+          .webp({ quality: 80 })
+          .toFile(thumbPath);
+      } catch (err) {
+        logger.warn('Failed to generate thumbnail', { fileId: fileRecord.id, error: err.message });
+      }
+    } else if (req.file.mimetype.startsWith('video/')) {
+      // Generate thumbnail for videos
+      try {
+        const thumbDir = path.join(process.env.STORAGE_DIR ?? './storage', 'thumbnails');
+        fs.mkdirSync(thumbDir, { recursive: true });
+        const thumbFilename = `${fileRecord.id}.webp`;
+        const thumbPath = path.join(thumbDir, thumbFilename);
+        
+        await new Promise((resolve, reject) => {
+          ffmpeg(tempPath)
+            .screenshots({
+              timestamps: [0.1], // Grab frame near the start to avoid ffprobe requirement
+              filename: thumbFilename,
+              folder: thumbDir,
+              size: '150x150'
+            })
+            .on('end', () => resolve())
+            .on('error', (err) => reject(err));
+        });
+      } catch (err) {
+        logger.warn('Failed to generate video thumbnail', { fileId: fileRecord.id, error: err.message });
+      }
+    }
+
     // 6. Promote temp file to WORM-locked storage (outside transaction — FS operation)
+    // We do NOT await this so the client gets a fast response while WORM upload happens in background
     promoteToStorage(tempPath, version.physicalPath);
 
     // 7. Log access
@@ -133,6 +184,21 @@ export const uploadFile = asyncHandler(async (req, res) => {
 
   logger.info('File uploaded', { fileId: fileRecord.id, version: version.versionNumber, userId });
   res.status(201).json({ status: 'success', file: fileRecord, version });
+});
+
+// ─── GET /api/files/:id/thumbnail ─────────────────────────────────────────────
+export const getThumbnail = asyncHandler(async (req, res) => {
+  const file = await assertFileAccess(req.params.id, req.user.id);
+  if (file.isTrashed) throw new NotFoundError('File is in trash');
+
+  const thumbPath = path.join(process.env.STORAGE_DIR ?? './storage', 'thumbnails', `${file.id}.webp`);
+  if (fs.existsSync(thumbPath)) {
+    res.setHeader('Content-Type', 'image/webp');
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    fs.createReadStream(thumbPath).pipe(res);
+  } else {
+    res.status(404).json({ error: 'Thumbnail not found' });
+  }
 });
 
 // ─── GET /api/files/:id/download ─────────────────────────────────────────────
@@ -148,7 +214,27 @@ export const downloadFile = asyncHandler(async (req, res) => {
 
   await prisma.accessLog.create({ data: { userId: req.user.id, fileId: file.id } });
 
-  res.download(latestVersion.physicalPath, file.name);
+  const range = req.headers.range;
+  if (range && file.mimeType.startsWith('video/')) {
+    const totalSize = Number(file.size);
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+    const chunksize = (end - start) + 1;
+
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunksize,
+      'Content-Type': file.mimeType,
+    });
+
+    await streamRangeToResponse(latestVersion.physicalPath, res, start, end);
+  } else {
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Length', Number(file.size));
+    await streamToResponse(latestVersion.physicalPath, file.name, res);
+  }
 });
 
 // ─── GET /api/files/:id/scan ─────────────────────────────────────────────────
@@ -199,8 +285,8 @@ export const restoreVersion = asyncHandler(async (req, res) => {
   const newVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
   const newStoragePath = buildStoragePath(req.user.id, file.id, newVersionNumber, file.name);
 
-  // Copy old WORM-locked file to new path
-  fs.copyFileSync(targetVersion.physicalPath, newStoragePath);
+  // Copy old stored file to new path
+  await copyStorageFile(targetVersion.physicalPath, newStoragePath);
 
   const newVersion = await prisma.$transaction(async (tx) => {
     const v = await tx.fileVersion.create({
@@ -263,10 +349,8 @@ export const hardDeleteFile = asyncHandler(async (req, res) => {
   if (!file || file.ownerId !== req.user.id) throw new NotFoundError('File not found');
   if (!file.isTrashed) throw new BadRequestError('File must be in trash to be permanently deleted');
 
-  const { purgeFile } = await import('../services/worm.service.js');
-  
   for (const version of file.versions) {
-    purgeFile(version.physicalPath);
+    await purgeFile(version.physicalPath);
   }
 
   const totalSize = file.versions.reduce((acc, v) => acc + v.sizeBytes, 0n);
@@ -283,54 +367,109 @@ export const hardDeleteFile = asyncHandler(async (req, res) => {
 
 // ─── DELETE /api/files/trash/empty ───────────────────────────────────────────
 export const emptyTrash = asyncHandler(async (req, res) => {
-  const expiredFiles = await prisma.file.findMany({
+  // 1. Gather explicitly trashed items
+  const explicitTrashedFiles = await prisma.file.findMany({
     where: { ownerId: req.user.id, isTrashed: true },
     include: { versions: true },
   });
 
-  const { purgeFile } = await import('../services/worm.service.js');
-  
-  let filesDeleted = 0;
-  for (const file of expiredFiles) {
-    try {
-      for (const version of file.versions) {
-        purgeFile(version.physicalPath);
-      }
-
-      const totalSize = file.versions.reduce((acc, v) => acc + v.sizeBytes, 0n);
-      await prisma.$transaction([
-        prisma.file.delete({ where: { id: file.id } }),
-        prisma.user.update({
-          where: { id: file.ownerId },
-          data: { storageUsed: { decrement: totalSize } },
-        }),
-      ]);
-      filesDeleted++;
-    } catch (err) {
-      logger.error('Error hard-deleting file on empty trash', { fileId: file.id, err: err.message });
-    }
-  }
-
-  // Purge any folders in trash (for empty trash, we delete all trashed folders of user)
-  // First get all trashed folders
   const trashedFolders = await prisma.folder.findMany({
     where: { ownerId: req.user.id, isTrashed: true }
   });
-  
-  let foldersDeleted = 0;
-  // Delete from bottom up (or just use Prisma cascade if configured, but safe way is multiple passes)
-  // Actually, Prisma might not cascade folder deletions if there are subfolders, so just delete them one by one.
-  // Assuming no children left if empty trash deleting everything.
-  for (const folder of trashedFolders) {
-    try {
-      await prisma.folder.delete({ where: { id: folder.id } });
-      foldersDeleted++;
-    } catch (err) {
-      // Ignored
+
+  const allFileIds = new Set();
+  const allFolderIds = new Set();
+  const pathsToPurge = new Set();
+  let totalSize = 0n;
+
+  // Add explicitly trashed files
+  for (const file of explicitTrashedFiles) {
+    if (!allFileIds.has(file.id)) {
+      allFileIds.add(file.id);
+      for (const version of file.versions) {
+        totalSize += version.sizeBytes;
+        pathsToPurge.add(version.physicalPath);
+      }
     }
   }
 
-  res.json({ status: 'success', message: `Permanently deleted ${filesDeleted} files and ${foldersDeleted} folders` });
+  // 2. Recursively gather ALL contents of trashed folders, regardless of their individual isTrashed state.
+  // This prevents non-trashed files inside trashed folders from being orphaned to the root directory.
+  async function gatherFolderContents(folderId) {
+    if (allFolderIds.has(folderId)) return;
+    allFolderIds.add(folderId);
+
+    // Get files in this folder
+    const files = await prisma.file.findMany({
+      where: { folderId },
+      include: { versions: true }
+    });
+    for (const file of files) {
+      if (!allFileIds.has(file.id)) {
+        allFileIds.add(file.id);
+        for (const version of file.versions) {
+          totalSize += version.sizeBytes;
+          pathsToPurge.add(version.physicalPath);
+        }
+      }
+    }
+
+    // Recursively get subfolders
+    const subfolders = await prisma.folder.findMany({
+      where: { parentFolderId: folderId }
+    });
+    for (const sub of subfolders) {
+      await gatherFolderContents(sub.id);
+    }
+  }
+
+  for (const folder of trashedFolders) {
+    await gatherFolderContents(folder.id);
+  }
+
+  const finalFileIds = Array.from(allFileIds);
+  const finalFolderIds = Array.from(allFolderIds);
+
+  // Fast bulk deletion from Database
+  if (finalFileIds.length > 0) {
+    await prisma.$transaction([
+      prisma.file.deleteMany({ where: { id: { in: finalFileIds } } }),
+      prisma.user.update({
+        where: { id: req.user.id },
+        data: { storageUsed: { decrement: totalSize } },
+      }),
+    ]);
+  }
+
+  if (finalFolderIds.length > 0) {
+    try {
+      await prisma.folder.deleteMany({ where: { id: { in: finalFolderIds } } });
+    } catch (err) {
+      // Fallback: If deleteMany fails due to nested foreign key constraints, delete individually bottom-up
+      for (const folderId of finalFolderIds) {
+        try { await prisma.folder.delete({ where: { id: folderId } }); } catch (e) {}
+      }
+    }
+  }
+
+  // Return success immediately to prevent HTTP timeouts
+  res.json({ status: 'success', message: `Permanently deleted ${finalFileIds.length} files and ${finalFolderIds.length} folders` });
+
+  // Fire and forget physical deletion in the background
+  const pathsArray = Array.from(pathsToPurge);
+  if (pathsArray.length > 0) {
+    Promise.resolve().then(async () => {
+      try {
+        // Process in small chunks to avoid overloading the SFTP connection pool
+        for (let i = 0; i < pathsArray.length; i += 5) {
+          const chunk = pathsArray.slice(i, i + 5);
+          await Promise.allSettled(chunk.map(p => purgeFile(p)));
+        }
+      } catch (err) {
+        logger.error('Background purge failed during empty trash', { err: err.message });
+      }
+    });
+  }
 });
 
 // ─── PATCH /api/files/:id/star ────────────────────────────────────────────────
@@ -529,8 +668,7 @@ export const copyFiles = asyncHandler(async (req, res) => {
     });
 
     const newStoragePath = buildStoragePath(req.user.id, newFile.id, 1, newFile.name);
-    fs.copyFileSync(latestVersion.physicalPath, newStoragePath);
-    lockFile(newStoragePath);
+    await copyStorageFile(latestVersion.physicalPath, newStoragePath);
 
     await prisma.fileVersion.create({
       data: {
@@ -606,9 +744,14 @@ export const downloadZip = asyncHandler(async (req, res) => {
   if (dirIds.length === 1 && fIds.length === 0 && folders.length === 1) downloadName = `${folders[0].name}.zip`;
   
   res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadName)}"`);
 
   const archive = createZipStream(items);
+  archive.on('error', (err) => {
+    logger.error('Zip archive error in file controller', { error: err.message });
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to create zip' });
+    else res.end();
+  });
   archive.pipe(res);
 });
 

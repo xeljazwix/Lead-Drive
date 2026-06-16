@@ -1,4 +1,4 @@
-import { api } from './client.js';
+import { api, BASE } from './client.js';
 
 export const foldersApi = {
   getRoot:    ()          => api.get('/folders/root/contents'),
@@ -23,7 +23,7 @@ export const filesApi = {
       
       const token = localStorage.getItem('cd_token');
       const a = document.createElement('a');
-      a.href = `/api/files/${id}/download?token=${token}`;
+      a.href = `${BASE}/files/${id}/download?token=${token}`;
       a.download = name;
       a.click();
     } catch (err) {
@@ -54,7 +54,7 @@ export const filesApi = {
     if (fileIds?.length) params.append('fileIds', fileIds.join(','));
     if (folderIds?.length) params.append('folderIds', folderIds.join(','));
     const a = document.createElement('a');
-    a.href = `/api/files/download/zip?${params.toString()}`;
+    a.href = `${BASE}/files/download/zip?${params.toString()}`;
     a.click();
   }
 };

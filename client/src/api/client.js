@@ -1,7 +1,7 @@
 // ─── Base API Client ─────────────────────────────────────────────────────────
 // All requests go through here. Attaches JWT, handles 401 globally.
 
-const BASE = import.meta.env.VITE_API_URL || '/api';
+export const BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getToken() {
   return localStorage.getItem('cd_token');
@@ -12,6 +12,7 @@ async function request(path, options = {}) {
   const headers = { ...options.headers };
 
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  headers['Bypass-Tunnel-Reminder'] = 'true';
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
@@ -50,6 +51,7 @@ export const api = {
       
       const token = getToken();
       if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('Bypass-Tunnel-Reminder', 'true');
       
       if (xhr.upload && onProgress) {
         xhr.upload.onprogress = (e) => {

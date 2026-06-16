@@ -3,7 +3,7 @@ import { asyncHandler } from '../utils/helpers.js';
 import { BadRequestError, NotFoundError } from '../utils/errors.js';
 import crypto from 'node:crypto';
 import path from 'node:path';
-import fs from 'node:fs';
+import { streamToResponse } from '../services/worm.service.js';
 import { prepareZipItems, createZipStream } from '../services/archive.service.js';
 
 // ─── POST /api/public-links  (requires auth) ─────────────────────────────────
@@ -37,7 +37,7 @@ export const resolvePublicLink = asyncHandler(async (req, res) => {
       include: { versions: { orderBy: { versionNumber: 'desc' }, take: 1 } },
     });
     if (!file || file.isTrashed) throw new NotFoundError('File not found');
-    return res.json({ status: 'success', type: 'file', file, label: link.label });
+    return res.json({ status: 'success', type: 'file', file, label: link.label, expiresAt: link.expiresAt });
   }
 
   if (link.folderId) {
@@ -47,7 +47,7 @@ export const resolvePublicLink = asyncHandler(async (req, res) => {
       prisma.folder.findMany({ where: { parentFolderId: link.folderId, isTrashed: false }, orderBy: { name: 'asc' } }),
       prisma.file.findMany({ where: { folderId: link.folderId, isTrashed: false }, orderBy: { name: 'asc' } }),
     ]);
-    return res.json({ status: 'success', type: 'folder', folder, subFolders, files, label: link.label });
+    return res.json({ status: 'success', type: 'folder', folder, subFolders, files, label: link.label, expiresAt: link.expiresAt });
   }
 });
 
@@ -97,11 +97,9 @@ export const publicDownload = asyncHandler(async (req, res) => {
   if (!latest) throw new NotFoundError('No file version found');
 
   const absPath = latest.physicalPath;
-  if (!fs.existsSync(absPath)) throw new NotFoundError('File data not found');
 
-  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.name)}"`);
   res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-  fs.createReadStream(absPath).pipe(res);
+  await streamToResponse(absPath, file.name, res);
 });
 
 // ─── GET /api/p/:token/download-zip  (public batch download, no auth) ────────
@@ -145,9 +143,15 @@ export const publicDownloadZip = asyncHandler(async (req, res) => {
   if (link.label) downloadName = `${link.label}.zip`;
 
   res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadName)}"`);
 
   const archive = createZipStream(items);
+  archive.on('error', (err) => {
+    // Cannot reliably import logger here if it wasn't already, but we can do a console error or res.end
+    console.error('Zip archive error in public controller:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to create zip' });
+    else res.end();
+  });
   archive.pipe(res);
 });
 

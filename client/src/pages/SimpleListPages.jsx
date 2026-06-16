@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { filesApi } from '../api/drive.js';
 import { Header } from '../components/layout/Header.jsx';
 import { FileCard } from '../components/drive/FileCard.jsx';
@@ -9,16 +10,16 @@ import { previewFile } from '../utils/previewFile.js';
 import { useModals } from '../hooks/useModals.js';
 import { toast } from '../components/ui/Toast.jsx';
 import { useDriveStore } from '../store/drive.store.js';
+import { useAuthStore } from '../store/auth.store.js';
 import { useNavigate } from 'react-router-dom';
 import styles from './SimpleListPage.module.css';
+import { Loader } from '../components/ui/Loader.jsx';
 
-import { useMemo } from 'react';
 import { processDriveItems } from '../utils/sortAndFilter.js';
 import { FilterBar } from '../components/drive/FilterBar.jsx';
 import { FolderCard } from '../components/drive/FolderCard.jsx';
 import { Info, RotateCcw, Folder } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useRef } from 'react';
 import { useDragSelect } from '../hooks/useDragSelect.js';
 
 export function SharedPage() {
@@ -69,22 +70,23 @@ export function SharedPage() {
     <>
       <Header title={t('nav.sharedWithMe')} />
       <div ref={containerRef} className={styles.container} style={{ position: 'relative', minHeight: '100%' }}>
-        {selectionBox && (
+        {selectionBox && createPortal(
           <div style={{
             position: 'fixed', pointerEvents: 'none', zIndex: 9999,
             left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height,
             backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2
-          }} />
+          }} />,
+          document.body
         )}
-        {loading && <p className={styles.msg}>{t('admin.loading')}</p>}
+        {loading && <Loader fullScreen={false} text={t('admin.loading')} />}
         {!loading && files.length === 0 && folders.length === 0 && (
           <p className={styles.msg}>{t('drive.noShared') || 'No files or folders have been shared with you.'}</p>
         )}
         
         {folders.length > 0 && <h2 className={styles.section}>{t('drive.folders') || 'Folders'} ({folders.length})</h2>}
         <div className={`${styles.grid} ${view === 'list' ? styles.list : ''}`}>
-          {folders.map(f => (
-            <FolderCard key={f.id} folder={f} view={view} itemsList={itemsList}
+          {folders.map((f, i) => (
+            <FolderCard key={f.id} folder={f} view={view} itemsList={itemsList} index={i}
               onOpen={(folder) => navigate(`/drive/shared-folder/${folder.id}`)}
               onRename={() => {}} onTrash={() => {}} onShare={() => {}}
             />
@@ -151,7 +153,7 @@ export function StarredPage() {
   }
   async function handleTrash(file) {
     await filesApi.trash(file.id);
-    toast.success('Moved to trash');
+    toast.success(t('toast.movedToTrash', 'Moved to trash'));
     load();
   }
 
@@ -159,14 +161,8 @@ export function StarredPage() {
     <>
       <Header title={t('nav.starred')} />
       <div ref={containerRef} className={styles.container} style={{ position: 'relative', minHeight: '100%' }}>
-        {selectionBox && (
-          <div style={{
-            position: 'fixed', pointerEvents: 'none', zIndex: 9999,
-            left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height,
-            backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2
-          }} />
-        )}
-        {loading && <p className={styles.msg}>{t('admin.loading')}</p>}
+        {selectionBox && createPortal(<div style={{position: 'fixed', pointerEvents: 'none', zIndex: 9999, left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height, backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2}} />, document.body)}
+        {loading && <Loader fullScreen={false} text={t('admin.loading')} />}
         {!loading && files.length === 0 && <p className={styles.msg}>{t('drive.noStarred') || 'No starred files yet.'}</p>}
         <div className={`${styles.grid} ${view === 'list' ? styles.list : ''}`}>
           {files.map(f => (
@@ -228,14 +224,8 @@ export function RecentPage() {
     <>
       <Header title={t('nav.recent')} />
       <div ref={containerRef} className={styles.container} style={{ position: 'relative', minHeight: '100%' }}>
-        {selectionBox && (
-          <div style={{
-            position: 'fixed', pointerEvents: 'none', zIndex: 9999,
-            left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height,
-            backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2
-          }} />
-        )}
-        {loading && <p className={styles.msg}>{t('admin.loading')}</p>}
+        {selectionBox && createPortal(<div style={{position: 'fixed', pointerEvents: 'none', zIndex: 9999, left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height, backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2}} />, document.body)}
+        {loading && <Loader fullScreen={false} text={t('admin.loading')} />}
         {!loading && files.length === 0 && <p className={styles.msg}>{t('drive.noRecent') || 'No recently accessed files.'}</p>}
         <div className={`${styles.grid} ${view === 'list' ? styles.list : ''}`}>
           {files.map(f => (
@@ -258,6 +248,7 @@ export function RecentPage() {
 
 export function TrashPage() {
   const { t } = useTranslation();
+  const refreshUser = useAuthStore((state) => state.refreshUser);
   const [rawFiles, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const { view, filterType, sortBy, clearSelection } = useDriveStore();
@@ -281,7 +272,7 @@ export function TrashPage() {
     try {
       await filesApi.restore(file.id);
       toast.success(`${file.name} restored`);
-      load();
+      load(); refreshUser();
     } catch (err) { toast.error(err.message); }
   }
 
@@ -290,7 +281,7 @@ export function TrashPage() {
     try {
       await filesApi.hardDelete(file.id);
       toast.success(`${file.name} permanently deleted`);
-      load();
+      load(); refreshUser();
     } catch (err) { toast.error(err.message); }
   }
 
@@ -299,7 +290,7 @@ export function TrashPage() {
     try {
       await filesApi.emptyTrash();
       toast.success('Trash emptied');
-      load();
+      load(); refreshUser();
     } catch (err) { toast.error(err.message); }
   }
 
@@ -307,13 +298,7 @@ export function TrashPage() {
     <>
       <Header title={t('nav.trash')} />
       <div ref={containerRef} className={styles.container} style={{ position: 'relative', minHeight: '100%' }}>
-        {selectionBox && (
-          <div style={{
-            position: 'fixed', pointerEvents: 'none', zIndex: 9999,
-            left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height,
-            backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2
-          }} />
-        )}
+        {selectionBox && createPortal(<div style={{position: 'fixed', pointerEvents: 'none', zIndex: 9999, left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height, backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2}} />, document.body)}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <p className={styles.notice} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
             <Info size={14} />
@@ -325,15 +310,16 @@ export function TrashPage() {
             </button>
           )}
         </div>
-        {loading && <p className={styles.msg}>{t('admin.loading')}</p>}
+        {loading && <Loader fullScreen={false} text={t('admin.loading')} />}
         {!loading && files.length === 0 && <p className={styles.msg}>{t('drive.noTrash') || 'Trash is empty.'}</p>}
         <div className={`${styles.grid} ${view === 'list' ? styles.list : ''}`}>
-          {files.map(f => (
+          {files.map((f, i) => (
             <FileCard 
               key={f.id} 
               file={f} 
               view={view} 
               itemsList={files} 
+              index={i} 
               isTrash={true} 
               onRestore={handleRestore} 
               onHardDelete={handleHardDelete} 
@@ -390,14 +376,8 @@ export function SearchPage() {
     <>
       <Header title={`${t('nav.search') || 'Search'}: "${q}"`} />
       <div ref={containerRef} className={styles.container} style={{ position: 'relative', minHeight: '100%' }}>
-        {selectionBox && (
-          <div style={{
-            position: 'fixed', pointerEvents: 'none', zIndex: 9999,
-            left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height,
-            backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2
-          }} />
-        )}
-        {loading && <p className={styles.msg}>{t('admin.loading')}</p>}
+        {selectionBox && createPortal(<div style={{position: 'fixed', pointerEvents: 'none', zIndex: 9999, left: selectionBox.left, top: selectionBox.top, width: selectionBox.width, height: selectionBox.height, backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.8)', borderRadius: 2}} />, document.body)}
+        {loading && <Loader fullScreen={false} text={t('admin.loading')} />}
         {!loading && files.length === 0 && folders.length === 0 && q && <p className={styles.msg}>{t('drive.noSearchResults') || 'No results for'} "{q}".</p>}
         {folders.length > 0 && <h2 className={styles.section}>{t('drive.folders') || 'Folders'} ({folders.length})</h2>}
         <div className={`${styles.grid} ${view === 'list' ? styles.list : ''}`}>
@@ -410,8 +390,8 @@ export function SearchPage() {
         </div>
         {files.length > 0 && <h2 className={styles.section}>{t('drive.files') || 'Files'} ({files.length})</h2>}
         <div className={`${styles.grid} ${view === 'list' ? styles.list : ''}`}>
-          {files.map(f => (
-            <FileCard key={f.id} file={f} view={view} itemsList={itemsList}
+          {files.map((f, i) => (
+            <FileCard key={f.id} file={f} view={view} itemsList={itemsList} index={i}
               onStar={() => {}} onTrash={() => {}} onShare={() => {}} onVersions={() => {}}
               onDownload={f => filesApi.download(f.id, f.name, toast)}
               onPreview={f => previewFile(f, openModal).catch(err => toast.error(err.message))}
@@ -424,3 +404,4 @@ export function SearchPage() {
     </>
   );
 }
+

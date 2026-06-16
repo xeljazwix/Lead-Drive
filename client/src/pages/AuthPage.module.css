@@ -10,7 +10,7 @@
   padding: 40px;
   border-radius: var(--r-xl);
   background: var(--surface);
-  box-shadow: -12px -12px 24px #ffffff, 12px 12px 32px #a3b1c6;
+  box-shadow: -12px -12px 24px var(--shadow-light), 12px 12px 32px var(--shadow-dark);
   text-align: center;
 }
 
@@ -20,7 +20,7 @@
   background: var(--primary);
   padding: 8px 12px;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: -6px -6px 12px rgba(255,255,255,0.5), 6px 6px 14px rgba(0,88,190,0.4);
+  box-shadow: 0 8px 20px var(--btn-primary-glow);
 }
 
 .title    { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 6px; }

@@ -17,11 +17,11 @@ export function Modal({ open, onClose, title, children, footer, width = 480 }) {
 
   return createPortal(
     <div
-      className={styles.overlay}
+      className={`${styles.overlay} animate-fade-in`}
       ref={overlayRef}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className={styles.modal} style={{ maxWidth: width }} role="dialog" aria-modal="true">
+      <div className={`${styles.modal} animate-scale-in`} style={{ maxWidth: width }} role="dialog" aria-modal="true">
         <div className={styles.header}>
           <h2 className={styles.title}>{title}</h2>
           <button className={styles.close} onClick={onClose} aria-label="Close">✕</button>

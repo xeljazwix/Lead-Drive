@@ -6,4 +6,5 @@ export const adminApi = {
   createUser:  (body)         => api.post('/admin/users', body),
   updateQuota: (id, quota)    => api.patch(`/admin/users/${id}/quota`, { storageQuota: quota }),
   deleteUser:  (id, hard)     => api.delete(`/admin/users/${id}${hard ? '?hard=true' : ''}`),
+  updateSettings: (settings)  => api.patch('/admin/settings', settings),
 };

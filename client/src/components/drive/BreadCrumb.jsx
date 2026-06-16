@@ -1,15 +1,20 @@
 import { useDriveStore } from '../../store/drive.store.js';
-import { FolderOpen, ChevronRight } from 'lucide-react';
+import { FolderOpen, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styles from './BreadCrumb.module.css';
 
-export function BreadCrumb({ onNavigateRoot, onNavigateTo }) {
+export function BreadCrumb({ onNavigateRoot, onNavigateBack, onNavigateTo, showBackButton }) {
   const { t } = useTranslation();
   const { breadcrumb } = useDriveStore();
 
   return (
     <nav className={styles.crumb} aria-label="Breadcrumb">
-      <button className={styles.item} onClick={onNavigateRoot}>
+      {showBackButton && (
+        <button className={`${styles.item} ${styles.backBtn}`} onClick={onNavigateBack} title={t('drive.back', 'Back')} type="button">
+          <ArrowLeft size={16} /> {t('drive.back', 'Back')}
+        </button>
+      )}
+      <button className={styles.item} onClick={onNavigateRoot} type="button">
         <FolderOpen size={16} /> {t('nav.myDrive')}
       </button>
       {breadcrumb.map((folder, i) => (

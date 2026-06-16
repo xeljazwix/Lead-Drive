@@ -3,11 +3,13 @@ import unzipper from 'unzipper';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { PassThrough } from 'node:stream';
 import prisma from '../utils/prisma.js';
 import { scanFile } from './clamav.service.js';
-import { promoteToStorage, purgeTempFile, buildStoragePath } from './worm.service.js';
+import { promoteToStorage, purgeTempFile, buildStoragePath, streamToWritable } from './worm.service.js';
 import { computeChecksum } from '../utils/helpers.js';
 import { StorageQuotaError, ThreatDetectedError, ForbiddenError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
 
 // ─── Recursive Fetch Helpers ────────────────────────────────────────────────
 
@@ -97,19 +99,33 @@ export async function prepareZipItems(fileIds = [], folderIds = []) {
 export function createZipStream(items) {
   const archive = new ZipArchive({ zlib: { level: 4 } });
   
-  // Track missing files
+  // Asynchronously populate the archive so we can stream files dynamically
+  populateZipArchive(archive, items).catch(err => {
+    logger.error('Failed to populate zip archive', { error: err.message });
+    archive.emit('error', err);
+  });
+  
+  return archive;
+}
+
+async function populateZipArchive(archive, items) {
   for (const item of items) {
     const v = item.dbFile.versions[0];
     const spath = v.physicalPath;
-    if (fs.existsSync(spath)) {
-      archive.file(spath, { name: item.archivePath });
-    } else {
-      archive.append('File not found on storage server', { name: `${item.archivePath}.error.txt` });
+    
+    const pt = new PassThrough();
+    archive.append(pt, { name: item.archivePath });
+    
+    try {
+      await streamToWritable(spath, pt);
+    } catch (err) {
+      logger.error('Failed to stream file to zip', { storagePath: spath, error: err.message });
+      // End the stream with an error message inside the zip file
+      pt.end(`\n\nERROR: Failed to read file from storage server.\nDetails: ${err.message}`);
     }
   }
   
   archive.finalize();
-  return archive;
 }
 
 // ─── Compress to Drive ──────────────────────────────────────────────────────

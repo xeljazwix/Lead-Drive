@@ -32,3 +32,10 @@ export function quotaPercent(used, total) {
   if (!total || total === '0') return 0;
   return Math.min(100, (Number(used) / Number(total)) * 100);
 }
+
+export function getAvatarUrl(url) {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  const baseUrl = import.meta.env.VITE_API_URL.replace(/\/api$/, '');
+  return `${baseUrl}${url}`;
+}

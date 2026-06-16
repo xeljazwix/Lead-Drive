@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { FileThumbnail } from '../components/drive/FileThumbnail.jsx';
 import { formatBytes } from '../utils/format.js';
-import { Download, Folder, ChevronRight, Home, CheckSquare, Square, Package } from 'lucide-react';
+import { Download, Folder, ChevronRight, Home, CheckSquare, Square, Package, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Loader } from '../components/ui/Loader.jsx';
 import styles from './PublicPage.module.css';
 
-const BASE = '/api';
+import { BASE } from '../api/client.js';
 
 async function fetchPublic(token) {
   const r = await fetch(`${BASE}/p/${token}`);
@@ -136,7 +137,7 @@ export function PublicPage() {
   if (data.type === 'file') {
     const { file } = data;
     return (
-      <PublicShell label={data.label ?? file.name} t={t}>
+      <PublicShell label={data.label ?? file.name} expiresAt={data.expiresAt} t={t}>
         <div className={styles.singleFile}>
           <div className={styles.fileBig}><FileThumbnail file={file} /></div>
           <h1 className={styles.fileName}>{file.name}</h1>
@@ -159,7 +160,7 @@ export function PublicPage() {
   const totalItems     = currentFolders.length + currentFiles.length;
 
   return (
-    <PublicShell label={data.label ?? rootFolder.name} t={t}>
+    <PublicShell label={data.label ?? rootFolder.name} expiresAt={data.expiresAt} t={t}>
       {/* Breadcrumb */}
       {(breadcrumb.length > 0) && (
         <div className={styles.breadcrumb}>
@@ -201,7 +202,7 @@ export function PublicPage() {
         )}
       </div>
 
-      {navLoading && <div className={styles.center}><div className={styles.spinner} /></div>}
+      {navLoading && <Loader fullScreen={false} text={t('admin.loading')} />}
 
       {!navLoading && totalItems === 0 && (
         <div className={styles.center}>
@@ -217,7 +218,7 @@ export function PublicPage() {
             {currentFolders.map(f => {
               const isSel = selected.has(f.id);
               return (
-                <div key={f.id} className={`${styles.folderCard} ${isSel ? styles.selected : ''}`}>
+                <div key={f.id} className={`${styles.folderCard} ${isSel ? styles.selected : ''} animate-pop-in stagger-1`}>
                   <div className={styles.selCheck} onClick={(e) => { e.stopPropagation(); toggleSelect(f.id); }}>
                     {isSel ? <CheckSquare size={16} /> : <Square size={16} />}
                   </div>
@@ -240,7 +241,7 @@ export function PublicPage() {
             {currentFiles.map(f => {
               const isSel = selected.has(f.id);
               return (
-                <div key={f.id} className={`${styles.fileCard} ${isSel ? styles.selected : ''}`}>
+                <div key={f.id} className={`${styles.fileCard} ${isSel ? styles.selected : ''} animate-pop-in stagger-2`}>
                   {/* Select checkbox */}
                   <div className={styles.selCheck} onClick={() => toggleSelect(f.id)}>
                     {isSel ? <CheckSquare size={16} /> : <Square size={16} />}
@@ -273,7 +274,40 @@ export function PublicPage() {
   );
 }
 
-function PublicShell({ label, children, t }) {
+function PublicShell({ label, expiresAt, children, t }) {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const diff = new Date(expiresAt) - new Date();
+      if (diff <= 0) {
+        setTimeLeft(t ? t('share.expired', 'Expired') : 'Expired');
+        clearInterval(interval);
+      } else {
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        
+        if (d >= 1) {
+          const dStr = d === 1 ? (t ? t('share.day', 'day') : 'day') : (t ? t('share.days', 'days') : 'days');
+          setTimeLeft(`${d} ${dStr} ${h}h ${m}m ${s}s`);
+        } else {
+          setTimeLeft(`${h}h ${m}m ${s}s`);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [expiresAt, t]);
+
+  const showBadge = expiresAt !== null && expiresAt !== undefined;
+
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -288,7 +322,27 @@ function PublicShell({ label, children, t }) {
             }} />
             <span>{t ? t('publicPage.sharedWithYou', 'Shared with you') : 'Shared with you'}</span>
           </div>
-          {label && <span className={styles.headerLabel}>{label}</span>}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            {label && <span className={styles.headerLabel}>{label}</span>}
+            
+            {showBadge ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '4px 10px', borderRadius: 'var(--r-sm)',
+                background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                fontSize: 12, fontWeight: 600, fontFamily: 'monospace'
+              }}>
+                <Clock size={14} />
+                {timeLeft || '...'}
+              </div>
+            ) : (
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+                {t ? t('share.expireNever', 'Never expires') : 'Never expires'}
+              </span>
+            )}
+
+          </div>
         </div>
       </header>
       <main className={styles.main}>{children}</main>
